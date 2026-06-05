@@ -272,9 +272,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         </div>
         <div class="card">
           <div class="card-header"><div class="card-title">Alertas activas</div><button class="card-action" onclick="showPage('mantencion',null)">Ver todas →</button></div>
-          <div class="alert-item"><div class="alert-dot danger"></div><div><div class="alert-text">BJKP-31 — Cambio de aceite vencido</div><div class="alert-meta">Camión · Hoy · Santiago</div></div></div>
-          <div class="alert-item"><div class="alert-dot warn"></div><div><div class="alert-text">FGRT-14 — Revisión técnica en 5 días</div><div class="alert-meta">Furgón · 09 jun · Valparaíso</div></div></div>
-          <div class="alert-item"><div class="alert-dot warn"></div><div><div class="alert-text">LMNQ-07 — Cambio de neumáticos</div><div class="alert-meta">Camioneta · 12 jun · Santiago</div></div></div>
+          <div class="alert-item"><div class="alert-dot warn"></div><div><div class="alert-text">RT WH 62 — Mantención preventiva</div><div class="alert-meta">Tracto · 737 km faltantes · OPERACIONES</div></div></div>
+<div class="alert-item"><div class="alert-dot danger"></div><div><div class="alert-text">TG CV 61 — Mantención preventiva</div><div class="alert-meta">Camion · VENCIDA 983,099 km atrás · OPERACIONES</div></div></div>
         </div>
       </div>
       <div class="card">
@@ -282,10 +281,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         <table class="table">
           <thead><tr><th>Fecha</th><th>Patente</th><th>Tipo</th><th>Ciudad</th><th>Litros</th><th>Odómetro</th><th>Estado</th></tr></thead>
           <tbody>
-            <tr><td style="font-family:var(--mono);font-size:12px">04/06/2026</td><td style="font-family:var(--mono);font-weight:600">BJKP-31</td><td>Camión</td><td>Santiago</td><td style="font-family:var(--mono)">320 L</td><td style="font-family:var(--mono)">124.830</td><td><span class="badge badge-ok">Normal</span></td></tr>
-            <tr><td style="font-family:var(--mono);font-size:12px">04/06/2026</td><td style="font-family:var(--mono);font-weight:600">FGRT-14</td><td>Furgón</td><td>Valparaíso</td><td style="font-family:var(--mono)">85 L</td><td style="font-family:var(--mono)">87.440</td><td><span class="badge badge-ok">Normal</span></td></tr>
-            <tr><td style="font-family:var(--mono);font-size:12px">03/06/2026</td><td style="font-family:var(--mono);font-weight:600">LMNQ-07</td><td>Camioneta</td><td>Santiago</td><td style="font-family:var(--mono)">65 L</td><td style="font-family:var(--mono)">53.210</td><td><span class="badge badge-warn">Alto</span></td></tr>
-            <tr><td style="font-family:var(--mono);font-size:12px">03/06/2026</td><td style="font-family:var(--mono);font-weight:600">PQRS-22</td><td>Auto</td><td>Concepción</td><td style="font-family:var(--mono)">48 L</td><td style="font-family:var(--mono)">31.660</td><td><span class="badge badge-ok">Normal</span></td></tr>
+            <tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px">Sin registros de combustible aún — usa el módulo Combustible para ingresar</td></tr>
           </tbody>
         </table>
       </div>
@@ -303,7 +299,156 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         <div class="card">
           <div class="card-header"><div class="card-title">Registrar carga de combustible</div></div>
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">Patente</label><select class="form-select" id="comb-patente"><option>BJKP-31</option><option>FGRT-14</option><option>LMNQ-07</option><option>PQRS-22</option><option>WXYZ-09</option></select></div>
+            <div class="form-group"><label class="form-label">Patente</label><select class="form-select" id="comb-patente"><option>FS FF 92</option>
+<option>JC GF 73</option>
+<option>PP PD 56</option>
+<option>SS PL 86</option>
+<option>SS PZ 98</option>
+<option>FK ZC 22</option>
+<option>HV TT 53</option>
+<option>LC XX 16</option>
+<option>RJ ZK 15</option>
+<option>FB DT 79</option>
+<option>DC XP 82</option>
+<option>RJ ZK 29</option>
+<option>DF LS 64</option>
+<option>GW KV 40</option>
+<option>TY YH 46</option>
+<option>JC GG 53</option>
+<option>HW GK 26</option>
+<option>JP RT 82</option>
+<option>PJ JK 88</option>
+<option>PP RG 82</option>
+<option>ST CV 55</option>
+<option>TJ VV 82</option>
+<option>TK XY 16</option>
+<option>WB 24 31</option>
+<option>TZ WV 90</option>
+<option>VB PW 67</option>
+<option>KG BX 95</option>
+<option>KJ JD 18</option>
+<option>TL KH 69</option>
+<option>VB PW 70</option>
+<option>VB PW 71</option>
+<option>KP FY 35</option>
+<option>PP PD 49</option>
+<option>SP RV 33</option>
+<option>SS PH 59</option>
+<option>HZ TR 55</option>
+<option>TL WW 76</option>
+<option>VD ZR 36</option>
+<option>LT BK 94</option>
+<option>SS PP 21</option>
+<option>TL BB 13</option>
+<option>VF KV 94</option>
+<option>CD ZB 52</option>
+<option>DF LS 65</option>
+<option>DP RR 75</option>
+<option>GK PH 10</option>
+<option>GL CD 19</option>
+<option>GP RG 60</option>
+<option>HL FK 32</option>
+<option>HW GW 54</option>
+<option>JD DV 40</option>
+<option>JS HC 63</option>
+<option>KG BX 94</option>
+<option>KW KP 20</option>
+<option>KW KP 22</option>
+<option>KX SS 33</option>
+<option>LG YP 63</option>
+<option>LG YP 64</option>
+<option>LP HP 92</option>
+<option>PB XD 46</option>
+<option>PB YH 14</option>
+<option>RG SH 22</option>
+<option>RT WH 60</option>
+<option>RT WH 62</option>
+<option>SW VG 47</option>
+<option>SW VK 59</option>
+<option>SZ ZC 51</option>
+<option>SZ ZC 54</option>
+<option>TG CV 61</option>
+<option>TG CV 91</option>
+<option>TR ST 52</option>
+<option>TZ YZ 25</option>
+<option>VL FJ 80</option>
+<option>VL FK 29</option>
+<option>LT BK 92</option>
+<option>PS TK 36</option>
+<option>ST JG 97</option>
+<option>KP FY 40</option>
+<option>KX SR 41</option>
+<option>LL WT 65</option>
+<option>LT BK 89</option>
+<option>TY YH 45</option>
+<option>TY YJ 31</option>
+<option>TZ WV 40</option>
+<option>VB PW 69</option>
+<option>VD ZS 81</option>
+<option>SS PL 80</option>
+<option>ST JH 27</option>
+<option>ST JH 53</option>
+<option>ST JJ 26</option>
+<option>TY YJ 32</option>
+<option>TZ WW 19</option>
+<option>VP RK 13</option>
+<option>ST JH 45</option>
+<option>KX SR 40</option>
+<option>LL WT 66</option>
+<option>FR JC 13</option>
+<option>HW GW 55</option>
+<option>JC GG 54</option>
+<option>PC SH 55</option>
+<option>PC SH 61</option>
+<option>KP FY 37</option>
+<option>KP FY 38</option>
+<option>KX SR 38</option>
+<option>SR RR 41</option>
+<option>PC SH 56</option>
+<option>SR RR 42</option>
+<option>PT DG 81</option>
+<option>RD BB 76</option>
+<option>RF JX 85</option>
+<option>RL LW 47</option>
+<option>SH JT 19</option>
+<option>SH JT 73</option>
+<option>SS PL 20</option>
+<option>TZ WV 89</option>
+<option>VF KW 91</option>
+<option>VH RZ 71</option>
+<option>VP RK 43</option>
+<option>VP PY 75</option>
+<option>VP PY 69</option>
+<option>VP PX 95</option>
+<option>LT BK 90</option>
+<option>LT BK 90</option>
+<option>ST CV 63</option>
+<option>ST JB 53</option>
+<option>ST JH 73</option>
+<option>ST JJ 76</option>
+<option>ST PJ 19</option>
+<option>VB PW 68</option>
+<option>VF KV 49</option>
+<option>SS PL 22</option>
+<option>SS PZ 80</option>
+<option>KP FY 36</option>
+<option>PT CH 60</option>
+<option>SG LT 61</option>
+<option>ST CV 27</option>
+<option>ST CV 61</option>
+<option>ST JH 20</option>
+<option>RF JX 89</option>
+<option>SS PP 12</option>
+<option>ST PJ 11</option>
+<option>TP FB 29</option>
+<option>VD ZR 38</option>
+<option>VF KV 84</option>
+<option>LC XX 19</option>
+<option>LT BK 96</option>
+<option>PH HX 38</option>
+<option>PT DG 79</option>
+<option>SP RV 40</option>
+<option>VD ZR 54</option></select></div>
             <div class="form-group"><label class="form-label">Fecha</label><input type="date" class="form-input" id="comb-fecha"></div>
             <div class="form-group"><label class="form-label">Litros</label><input type="number" class="form-input" id="comb-litros" placeholder="ej: 120"></div>
             <div class="form-group"><label class="form-label">Odómetro (km)</label><input type="number" class="form-input" id="comb-odometro" placeholder="ej: 85000"></div>
@@ -329,9 +474,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         <table class="table" id="tabla-combustible">
           <thead><tr><th>Fecha</th><th>Patente</th><th>Ciudad</th><th>Litros</th><th>Odómetro</th><th>Conductor</th></tr></thead>
           <tbody id="tbody-combustible">
-            <tr><td style="font-family:var(--mono);font-size:12px">04/06/2026</td><td style="font-family:var(--mono);font-weight:600">BJKP-31</td><td>Santiago</td><td style="font-family:var(--mono)">320</td><td style="font-family:var(--mono)">124.830</td><td>Carlos Muñoz</td></tr>
-            <tr><td style="font-family:var(--mono);font-size:12px">04/06/2026</td><td style="font-family:var(--mono);font-weight:600">FGRT-14</td><td>Valparaíso</td><td style="font-family:var(--mono)">85</td><td style="font-family:var(--mono)">87.440</td><td>Jorge Soto</td></tr>
-            <tr><td style="font-family:var(--mono);font-size:12px">03/06/2026</td><td style="font-family:var(--mono);font-weight:600">LMNQ-07</td><td>Santiago</td><td style="font-family:var(--mono)">65</td><td style="font-family:var(--mono)">53.210</td><td>Ana Pérez</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px">Sin registros de combustible aún — usa el formulario para ingresar</td></tr>
           </tbody>
         </table>
       </div>
@@ -349,7 +492,156 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         <div class="card">
           <div class="card-header"><div class="card-title">Registrar mantención</div></div>
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">Patente</label><select class="form-select"><option>BJKP-31</option><option>FGRT-14</option><option>LMNQ-07</option><option>PQRS-22</option></select></div>
+            <div class="form-group"><label class="form-label">Patente</label><select class="form-select"><option>FS FF 92</option>
+<option>JC GF 73</option>
+<option>PP PD 56</option>
+<option>SS PL 86</option>
+<option>SS PZ 98</option>
+<option>FK ZC 22</option>
+<option>HV TT 53</option>
+<option>LC XX 16</option>
+<option>RJ ZK 15</option>
+<option>FB DT 79</option>
+<option>DC XP 82</option>
+<option>RJ ZK 29</option>
+<option>DF LS 64</option>
+<option>GW KV 40</option>
+<option>TY YH 46</option>
+<option>JC GG 53</option>
+<option>HW GK 26</option>
+<option>JP RT 82</option>
+<option>PJ JK 88</option>
+<option>PP RG 82</option>
+<option>ST CV 55</option>
+<option>TJ VV 82</option>
+<option>TK XY 16</option>
+<option>WB 24 31</option>
+<option>TZ WV 90</option>
+<option>VB PW 67</option>
+<option>KG BX 95</option>
+<option>KJ JD 18</option>
+<option>TL KH 69</option>
+<option>VB PW 70</option>
+<option>VB PW 71</option>
+<option>KP FY 35</option>
+<option>PP PD 49</option>
+<option>SP RV 33</option>
+<option>SS PH 59</option>
+<option>HZ TR 55</option>
+<option>TL WW 76</option>
+<option>VD ZR 36</option>
+<option>LT BK 94</option>
+<option>SS PP 21</option>
+<option>TL BB 13</option>
+<option>VF KV 94</option>
+<option>CD ZB 52</option>
+<option>DF LS 65</option>
+<option>DP RR 75</option>
+<option>GK PH 10</option>
+<option>GL CD 19</option>
+<option>GP RG 60</option>
+<option>HL FK 32</option>
+<option>HW GW 54</option>
+<option>JD DV 40</option>
+<option>JS HC 63</option>
+<option>KG BX 94</option>
+<option>KW KP 20</option>
+<option>KW KP 22</option>
+<option>KX SS 33</option>
+<option>LG YP 63</option>
+<option>LG YP 64</option>
+<option>LP HP 92</option>
+<option>PB XD 46</option>
+<option>PB YH 14</option>
+<option>RG SH 22</option>
+<option>RT WH 60</option>
+<option>RT WH 62</option>
+<option>SW VG 47</option>
+<option>SW VK 59</option>
+<option>SZ ZC 51</option>
+<option>SZ ZC 54</option>
+<option>TG CV 61</option>
+<option>TG CV 91</option>
+<option>TR ST 52</option>
+<option>TZ YZ 25</option>
+<option>VL FJ 80</option>
+<option>VL FK 29</option>
+<option>LT BK 92</option>
+<option>PS TK 36</option>
+<option>ST JG 97</option>
+<option>KP FY 40</option>
+<option>KX SR 41</option>
+<option>LL WT 65</option>
+<option>LT BK 89</option>
+<option>TY YH 45</option>
+<option>TY YJ 31</option>
+<option>TZ WV 40</option>
+<option>VB PW 69</option>
+<option>VD ZS 81</option>
+<option>SS PL 80</option>
+<option>ST JH 27</option>
+<option>ST JH 53</option>
+<option>ST JJ 26</option>
+<option>TY YJ 32</option>
+<option>TZ WW 19</option>
+<option>VP RK 13</option>
+<option>ST JH 45</option>
+<option>KX SR 40</option>
+<option>LL WT 66</option>
+<option>FR JC 13</option>
+<option>HW GW 55</option>
+<option>JC GG 54</option>
+<option>PC SH 55</option>
+<option>PC SH 61</option>
+<option>KP FY 37</option>
+<option>KP FY 38</option>
+<option>KX SR 38</option>
+<option>SR RR 41</option>
+<option>PC SH 56</option>
+<option>SR RR 42</option>
+<option>PT DG 81</option>
+<option>RD BB 76</option>
+<option>RF JX 85</option>
+<option>RL LW 47</option>
+<option>SH JT 19</option>
+<option>SH JT 73</option>
+<option>SS PL 20</option>
+<option>TZ WV 89</option>
+<option>VF KW 91</option>
+<option>VH RZ 71</option>
+<option>VP RK 43</option>
+<option>VP PY 75</option>
+<option>VP PY 69</option>
+<option>VP PX 95</option>
+<option>LT BK 90</option>
+<option>LT BK 90</option>
+<option>ST CV 63</option>
+<option>ST JB 53</option>
+<option>ST JH 73</option>
+<option>ST JJ 76</option>
+<option>ST PJ 19</option>
+<option>VB PW 68</option>
+<option>VF KV 49</option>
+<option>SS PL 22</option>
+<option>SS PZ 80</option>
+<option>KP FY 36</option>
+<option>PT CH 60</option>
+<option>SG LT 61</option>
+<option>ST CV 27</option>
+<option>ST CV 61</option>
+<option>ST JH 20</option>
+<option>RF JX 89</option>
+<option>SS PP 12</option>
+<option>ST PJ 11</option>
+<option>TP FB 29</option>
+<option>VD ZR 38</option>
+<option>VF KV 84</option>
+<option>LC XX 19</option>
+<option>LT BK 96</option>
+<option>PH HX 38</option>
+<option>PT DG 79</option>
+<option>SP RV 40</option>
+<option>VD ZR 54</option></select></div>
             <div class="form-group"><label class="form-label">Tipo</label><select class="form-select"><option>Cambio de aceite</option><option>Revisión técnica</option><option>Cambio neumáticos</option><option>Frenos</option><option>Filtros</option><option>Otro</option></select></div>
             <div class="form-group"><label class="form-label">Fecha realizada</label><input type="date" class="form-input"></div>
             <div class="form-group"><label class="form-label">Próxima mantención</label><input type="date" class="form-input"></div>
@@ -361,9 +653,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         </div>
         <div class="card">
           <div class="card-header"><div class="card-title">Alertas de mantención</div></div>
-          <div class="alert-item"><div class="alert-dot danger"></div><div><div class="alert-text">BJKP-31 · Cambio de aceite</div><div class="alert-meta">Vence HOY · Camión · Santiago · 124.830 km</div></div></div>
-          <div class="alert-item"><div class="alert-dot warn"></div><div><div class="alert-text">FGRT-14 · Revisión técnica</div><div class="alert-meta">Vence 09 jun · Furgón · Valparaíso</div></div></div>
-          <div class="alert-item"><div class="alert-dot warn"></div><div><div class="alert-text">LMNQ-07 · Cambio de neumáticos</div><div class="alert-meta">Vence 12 jun · Camioneta · Santiago</div></div></div>
+          <div class="alert-item"><div class="alert-dot warn"></div><div><div class="alert-text">RT WH 62 — Mantención preventiva</div><div class="alert-meta">Tracto · 737 km faltantes · OPERACIONES</div></div></div>
+<div class="alert-item"><div class="alert-dot danger"></div><div><div class="alert-text">TG CV 61 — Mantención preventiva</div><div class="alert-meta">Camion · VENCIDA 983,099 km atrás · OPERACIONES</div></div></div>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
             <div class="card-title" style="margin-bottom:10px">Intervalos por tipo</div>
             <table class="table"><thead><tr><th>Tipo</th><th>Mantención</th><th>Intervalo</th></tr></thead><tbody>
@@ -386,12 +677,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
         <div class="stat-box"><div class="stat-box-val" style="color:var(--danger)">1</div><div class="stat-box-label">Fuera de servicio</div></div>
       </div>
       <div class="vehicle-grid">
-        <div class="vehicle-card"><div class="vehicle-patente">BJKP-31</div><div class="vehicle-tipo">Camión · 2019 · Mercedes-Benz</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>Santiago</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">124.830 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-warn">Mantención pend.</span></div></div>
-        <div class="vehicle-card"><div class="vehicle-patente">FGRT-14</div><div class="vehicle-tipo">Furgón · 2021 · Renault</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>Valparaíso</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">87.440 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
-        <div class="vehicle-card"><div class="vehicle-patente">LMNQ-07</div><div class="vehicle-tipo">Camioneta · 2020 · Toyota</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>Santiago</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">53.210 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
-        <div class="vehicle-card"><div class="vehicle-patente">PQRS-22</div><div class="vehicle-tipo">Auto · 2022 · Suzuki</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>Concepción</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">31.660 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
-        <div class="vehicle-card"><div class="vehicle-patente">WXYZ-09</div><div class="vehicle-tipo">Camión · 2018 · Volvo</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>Santiago</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">98.120 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-danger">En taller</span></div></div>
-        <div class="vehicle-card" style="border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;min-height:130px"><div style="text-align:center;color:var(--text3)"><i class="ti ti-plus" style="font-size:24px;display:block;margin-bottom:6px"></i><span style="font-size:13px">Agregar vehículo</span></div></div>
+        <div class="vehicle-card"><div class="vehicle-patente">FS FF 92</div><div class="vehicle-tipo">Camioneta · 2013 · CHEVROLET</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>ANTOFAGASTA</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">329,047 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
+<div class="vehicle-card"><div class="vehicle-patente">JC GF 73</div><div class="vehicle-tipo">Camion · 2017 · MERCEDEZ BENZ</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>ANTOFAGASTA</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">405,050 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
+<div class="vehicle-card"><div class="vehicle-patente">PP PD 56</div><div class="vehicle-tipo">Camioneta · 2021 · HYUNDAI</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>ANTOFAGASTA</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">197,400 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
+<div class="vehicle-card"><div class="vehicle-patente">SS PL 86</div><div class="vehicle-tipo">Camioneta · 2023 · HYUNDAI</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>ANTOFAGASTA</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">96,496 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
+<div class="vehicle-card"><div class="vehicle-patente">SS PZ 98</div><div class="vehicle-tipo">Camioneta · 2023 · HYUNDAI</div><div class="vehicle-stat"><span class="vehicle-stat-label">Ciudad</span><span>ANTOFAGASTA</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Odómetro</span><span style="font-family:var(--mono);color:var(--accent)">84,258 km</span></div><div class="vehicle-stat"><span class="vehicle-stat-label">Estado</span><span class="badge badge-ok">Operativo</span></div></div>
+<div class="vehicle-card" style="border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;min-height:130px"><div style="text-align:center;color:var(--text3)"><i class="ti ti-plus" style="font-size:24px;display:block;margin-bottom:6px"></i><span style="font-size:13px">Agregar vehículo</span></div></div></div>
       </div>
     </div>
 

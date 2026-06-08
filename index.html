@@ -853,9 +853,14 @@ async function onLogin(user) {
     document.getElementById('user-rol-badge').textContent = perfil.rol;
     document.getElementById('user-info').style.display = 'flex';
 
-    // Ocultar acciones de eliminación para Operadores y fijar filtro ciudad
+    // Ocultar acciones de eliminación y pestaña odómetros para Operadores
     if (perfil.rol === 'Operador') {
       document.querySelectorAll('.btn-danger').forEach(b => b.style.display = 'none');
+      // Ocultar pestaña odómetros
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        if (b.textContent.includes('Odómetros')) b.style.display = 'none';
+      });
+      document.getElementById('tab-odometros').style.display = 'none';
       // Fijar filtro de ciudad automáticamente después de cargar datos
       setTimeout(() => {
         const ciudad = perfil.ciudad;
@@ -1020,10 +1025,13 @@ function filterVehiculos() {
 }
 
 function updateStats() {
-  document.getElementById('s-total').textContent   = allVehiculos.length;
-  document.getElementById('s-activos').textContent = allVehiculos.filter(v => v.estado === 'Operativo').length;
-  document.getElementById('s-mant').textContent    = allVehiculos.filter(v => v.estado === 'En mantención').length;
-  document.getElementById('s-inact').textContent   = allVehiculos.filter(v => v.estado !== 'Operativo' && v.estado !== 'En mantención').length;
+  const lista = (currentPerfil?.rol === 'Operador')
+    ? allVehiculos.filter(v => v.ciudad === currentPerfil.ciudad)
+    : allVehiculos;
+  document.getElementById('s-total').textContent   = lista.length;
+  document.getElementById('s-activos').textContent = lista.filter(v => v.estado === 'Operativo').length;
+  document.getElementById('s-mant').textContent    = lista.filter(v => v.estado === 'En mantención').length;
+  document.getElementById('s-inact').textContent   = lista.filter(v => v.estado !== 'Operativo' && v.estado !== 'En mantención').length;
 }
 
 function openModalVeh() {
@@ -1292,7 +1300,10 @@ async function renderCiudades() {
     }
   });
 
-  tbody.innerHTML = allCiudades.map(c => `
+  const ciudadesVisibles = (currentPerfil?.rol === 'Operador')
+    ? allCiudades.filter(c => c.nombre === currentPerfil.ciudad)
+    : allCiudades;
+  tbody.innerHTML = ciudadesVisibles.map(c => `
     <tr>
       <td><strong>${c.nombre}</strong></td>
       <td>${countMap[c.nombre] || 0}</td>

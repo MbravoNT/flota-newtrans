@@ -521,13 +521,13 @@
       <table>
         <thead>
           <tr>
-            <th>Fecha</th>
+            <th>Última Fecha</th>
             <th>Patente</th>
-            <th>Tipo Servicio</th>
-            <th>KM Servicio</th>
-            <th>KM Próximo</th>
-            <th>Costo</th>
-            <th>Taller</th>
+            <th>Tipo</th>
+            <th>KM Última</th>
+            <th>KM Próxima</th>
+            <th>KM Faltantes</th>
+            <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -637,15 +637,15 @@
     <input type="hidden" id="mant-id" />
     <div class="form-grid">
       <div class="form-group">
-        <label>Patente / Vehículo *</label>
-        <select id="mant-vehiculo"></select>
+        <label>Patente *</label>
+        <input type="text" id="mant-vehiculo" placeholder="ABCD12" style="text-transform:uppercase" />
       </div>
       <div class="form-group">
-        <label>Fecha *</label>
+        <label>Fecha Última *</label>
         <input type="date" id="mant-fecha" />
       </div>
       <div class="form-group">
-        <label>Tipo Servicio *</label>
+        <label>Tipo *</label>
         <select id="mant-tipo">
           <option value="">Seleccionar…</option>
           <option>Cambio Aceite</option>
@@ -657,24 +657,29 @@
         </select>
       </div>
       <div class="form-group">
-        <label>KM en Servicio</label>
+        <label>KM Última</label>
         <input type="number" id="mant-km" placeholder="0" min="0" />
       </div>
       <div class="form-group">
-        <label>KM Próximo Servicio</label>
+        <label>KM Próxima</label>
         <input type="number" id="mant-km-prox" placeholder="0" min="0" />
       </div>
       <div class="form-group">
-        <label>Costo (CLP)</label>
-        <input type="number" id="mant-costo" placeholder="0" min="0" />
+        <label>Intervalo KM</label>
+        <input type="number" id="mant-costo" placeholder="10000" min="0" />
       </div>
-      <div class="form-group full">
-        <label>Taller / Proveedor</label>
-        <input type="text" id="mant-taller" placeholder="Nombre del taller…" />
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="mant-taller">
+          <option value="">Seleccionar…</option>
+          <option>Al día</option>
+          <option>Próximo</option>
+          <option>Vencido</option>
+        </select>
       </div>
-      <div class="form-group full">
-        <label>Descripción / Notas</label>
-        <textarea id="mant-desc" placeholder="Detalle del servicio…"></textarea>
+      <div class="form-group">
+        <label>KM Faltantes</label>
+        <input type="number" id="mant-desc" placeholder="0" />
       </div>
     </div>
     <div class="form-actions">
@@ -763,7 +768,7 @@ async function loadVehiculos() {
     renderVehiculos(allVehiculos);
     updateStats();
     populateCiudadSelect();
-    populateVehSelect();
+    // populateVehSelect — patente libre
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
     toast(e.message, 'error');
@@ -891,8 +896,8 @@ async function loadMantencion() {
   try {
     const { data, error } = await sb
       .from('mantenciones')
-      .select('*, vehiculos(patente)')
-      .order('fecha', { ascending: false });
+      .select('*')
+      .order('fecha_ultima', { ascending: false });
     if (error) throw error;
     allMantencion = data || [];
     renderMantencion(allMantencion);
@@ -909,13 +914,13 @@ function renderMantencion(list) {
   }
   tbody.innerHTML = list.map(m => `
     <tr>
-      <td>${fmtDate(m.fecha)}</td>
-      <td><strong>${m.vehiculos?.patente || '—'}</strong></td>
-      <td>${m.tipo_servicio || '—'}</td>
-      <td>${fmtKm(m.km_servicio)}</td>
-      <td>${fmtKm(m.km_proximo)}</td>
-      <td>${fmtClp(m.costo)}</td>
-      <td>${m.taller || '—'}</td>
+      <td>${fmtDate(m.fecha_ultima)}</td>
+      <td><strong>${m.vehiculo_patente || '—'}</strong></td>
+      <td>${m.tipo || '—'}</td>
+      <td>${fmtKm(m.km_ultima)}</td>
+      <td>${fmtKm(m.km_proxima)}</td>
+      <td>${fmtKm(m.km_faltantes)}</td>
+      <td>${m.estado_mant || '—'}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editMantencion(${m.id})">✏️</button>
         <button class="btn btn-danger" onclick="deleteMantencion(${m.id})">✕</button>
@@ -928,8 +933,8 @@ function filterMantencion() {
   const q    = document.getElementById('search-mant').value.toLowerCase();
   const tipo = document.getElementById('filter-mant-tipo').value;
   const list = allMantencion.filter(m =>
-    (!q    || [m.vehiculos?.patente, m.tipo_servicio, m.taller].join(' ').toLowerCase().includes(q)) &&
-    (!tipo || m.tipo_servicio === tipo)
+    (!q    || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
+    (!tipo || m.tipo === tipo)
   );
   renderMantencion(list);
 }
@@ -938,7 +943,8 @@ function openModalMant() {
   document.getElementById('modal-mant-title').textContent = 'Nuevo Servicio';
   document.getElementById('mant-id').value = '';
   document.getElementById('mant-fecha').value = new Date().toISOString().slice(0,10);
-  ['km','km-prox','costo','taller','desc'].forEach(f => document.getElementById('mant-'+f).value = '');
+  ['vehiculo','km','km-prox','costo','desc'].forEach(f => document.getElementById('mant-'+f).value = '');
+  document.getElementById('mant-taller').value = '';
   document.getElementById('mant-tipo').value = '';
   document.getElementById('modal-mant').classList.add('open');
 }
@@ -947,15 +953,15 @@ function editMantencion(id) {
   const m = allMantencion.find(x => x.id === id);
   if (!m) return;
   document.getElementById('modal-mant-title').textContent = 'Editar Servicio';
-  document.getElementById('mant-id').value       = m.id;
-  document.getElementById('mant-vehiculo').value = m.vehiculo_id || '';
-  document.getElementById('mant-fecha').value    = m.fecha || '';
-  document.getElementById('mant-tipo').value     = m.tipo_servicio || '';
-  document.getElementById('mant-km').value       = m.km_servicio || '';
-  document.getElementById('mant-km-prox').value  = m.km_proximo || '';
-  document.getElementById('mant-costo').value    = m.costo || '';
-  document.getElementById('mant-taller').value   = m.taller || '';
-  document.getElementById('mant-desc').value     = m.descripcion || '';
+  document.getElementById('mant-id').value        = m.id;
+  document.getElementById('mant-vehiculo').value  = m.vehiculo_patente || '';
+  document.getElementById('mant-fecha').value     = m.fecha_ultima || '';
+  document.getElementById('mant-tipo').value      = m.tipo || '';
+  document.getElementById('mant-km').value        = m.km_ultima || '';
+  document.getElementById('mant-km-prox').value   = m.km_proxima || '';
+  document.getElementById('mant-costo').value     = m.intervalo_km || '';
+  document.getElementById('mant-taller').value    = m.estado_mant || '';
+  document.getElementById('mant-desc').value      = m.km_faltantes || '';
   document.getElementById('modal-mant').classList.add('open');
 }
 
@@ -965,17 +971,17 @@ async function saveMantencion() {
   const fecha = document.getElementById('mant-fecha').value;
   const tipo  = document.getElementById('mant-tipo').value;
 
-  if (!vehId || !fecha || !tipo) { toast('Completa los campos obligatorios', 'error'); return; }
+  if (!vehId || !tipo) { toast('Completa los campos obligatorios', 'error'); return; }
 
   const payload = {
-    vehiculo_id:   parseInt(vehId),
-    fecha,
-    tipo_servicio: tipo,
-    km_servicio:   parseInt(document.getElementById('mant-km').value) || null,
-    km_proximo:    parseInt(document.getElementById('mant-km-prox').value) || null,
-    costo:         parseInt(document.getElementById('mant-costo').value) || null,
-    taller:        document.getElementById('mant-taller').value.trim() || null,
-    descripcion:   document.getElementById('mant-desc').value.trim() || null,
+    vehiculo_patente: vehId,
+    fecha_ultima:     fecha,
+    tipo,
+    km_ultima:        parseInt(document.getElementById('mant-km').value) || null,
+    km_proxima:       parseInt(document.getElementById('mant-km-prox').value) || null,
+    intervalo_km:     parseInt(document.getElementById('mant-costo').value) || null,
+    estado_mant:      document.getElementById('mant-taller').value.trim() || null,
+    km_faltantes:     parseInt(document.getElementById('mant-desc').value) || null,
   };
 
   try {

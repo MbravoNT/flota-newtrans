@@ -606,8 +606,8 @@
         <input type="number" id="veh-km" placeholder="0" min="0" />
       </div>
       <div class="form-group">
-        <label>Ciudad *</label>
-        <select id="veh-ciudad"></select>
+        <label>Ciudad</label>
+        <input type="text" id="veh-ciudad" placeholder="SANTIAGO, CONCEPCION…" style="text-transform:uppercase" />
       </div>
       <div class="form-group">
         <label>Estado *</label>
@@ -769,7 +769,7 @@ async function loadVehiculos() {
   try {
     const { data, error } = await sb
       .from('vehiculos')
-      .select('*, ciudades(nombre)')
+      .select('*')
       .order('patente');
     if (error) throw error;
     allVehiculos = data || [];
@@ -795,7 +795,7 @@ function renderVehiculos(list) {
       <td>${v.tipo || '—'}</td>
       <td>${[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
       <td>${v.anio || '—'}</td>
-      <td>${v.ciudades?.nombre || '—'}</td>
+      <td>${v.ciudad || '—'}</td>
       <td>${fmtKm(v.km_actual)}</td>
       <td>${estadoBadge(v.estado)}</td>
       <td style="display:flex;gap:6px">
@@ -811,7 +811,7 @@ function filterVehiculos() {
   const tipo  = document.getElementById('filter-tipo').value;
   const estado= document.getElementById('filter-estado').value;
   const list  = allVehiculos.filter(v =>
-    (!q     || [v.patente,v.marca,v.modelo,v.ciudades?.nombre].join(' ').toLowerCase().includes(q)) &&
+    (!q     || [v.patente,v.marca,v.modelo,v.ciudad].join(' ').toLowerCase().includes(q)) &&
     (!tipo  || v.tipo === tipo) &&
     (!estado|| v.estado === estado)
   );
@@ -845,7 +845,7 @@ function editVehiculo(id) {
   document.getElementById('veh-modelo').value  = v.modelo || '';
   document.getElementById('veh-anio').value    = v.anio || '';
   document.getElementById('veh-km').value      = v.km_actual || '';
-  document.getElementById('veh-ciudad').value  = v.ciudad_id || '';
+  document.getElementById('veh-ciudad').value  = v.ciudad || '';
   document.getElementById('veh-estado').value  = v.estado || '';
   document.getElementById('veh-obs').value     = v.observaciones || '';
   document.getElementById('modal-veh').classList.add('open');
@@ -866,7 +866,7 @@ async function saveVehiculo() {
     modelo:        document.getElementById('veh-modelo').value.trim() || null,
     anio:          parseInt(document.getElementById('veh-anio').value) || null,
     km_actual:     parseInt(document.getElementById('veh-km').value) || 0,
-    ciudad_id:     document.getElementById('veh-ciudad').value || null,
+    ciudad:        document.getElementById('veh-ciudad').value.trim().toUpperCase() || null,
     estado,
     observaciones: document.getElementById('veh-obs').value.trim() || null,
   };
@@ -1042,20 +1042,21 @@ async function renderCiudades() {
     return;
   }
   // Enrich with vehicle counts
-  const { data: vehs } = await sb.from('vehiculos').select('ciudad_id, estado');
+  const { data: vehs } = await sb.from('vehiculos').select('ciudad, estado');
   const countMap = {};
   const activeMap = {};
   (vehs || []).forEach(v => {
-    countMap[v.ciudad_id]  = (countMap[v.ciudad_id]  || 0) + 1;
-    if (v.estado === 'Activo') activeMap[v.ciudad_id] = (activeMap[v.ciudad_id] || 0) + 1;
+    const k = v.ciudad;
+    countMap[k]  = (countMap[k]  || 0) + 1;
+    if (v.estado === 'Operativo') activeMap[k] = (activeMap[k] || 0) + 1;
   });
   tbody.innerHTML = allCiudades.map(c => `
     <tr>
       <td><strong>${c.nombre}</strong></td>
       <td>${c.codigo || '—'}</td>
       <td>${c.region || '—'}</td>
-      <td>${countMap[c.id] || 0}</td>
-      <td><span class="badge badge-green">${activeMap[c.id] || 0}</span></td>
+      <td>${countMap[c.nombre] || 0}</td>
+      <td><span class="badge badge-green">${activeMap[c.nombre] || 0}</span></td>
     </tr>
   `).join('');
 }

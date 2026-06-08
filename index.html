@@ -994,6 +994,7 @@ async function loadMantencion() {
     if (error) throw error;
     allMantencion = data || [];
     renderMantencion(allMantencion);
+    populateCiudadFilters();
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
   }

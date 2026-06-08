@@ -879,7 +879,7 @@ function renderVehiculos(list) {
     <tr>
       <td><strong>${v.patente}</strong></td>
       <td>${v.tipo || '—'}</td>
-      <td>${[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
+      <td>${v.modelo || '—'}</td>
       <td>${v.anio || '—'}</td>
       <td>${v.ciudad || '—'}</td>
       <td>${fmtKm(v.odometro)}</td>
@@ -929,7 +929,6 @@ function editVehiculo(id) {
   document.getElementById('veh-id').value      = v.id;
   document.getElementById('veh-patente').value = v.patente || '';
   document.getElementById('veh-tipo').value    = v.tipo || '';
-  document.getElementById('veh-marca').value   = v.marca || '';
   document.getElementById('veh-modelo').value  = v.modelo || '';
   document.getElementById('veh-anio').value    = v.anio || '';
   document.getElementById('veh-km').value      = v.odometro || '';
@@ -950,13 +949,11 @@ async function saveVehiculo() {
   const payload = {
     patente,
     tipo,
-    marca:         document.getElementById('veh-marca').value.trim() || null,
-    modelo:        document.getElementById('veh-modelo').value.trim() || null,
-    anio:          parseInt(document.getElementById('veh-anio').value) || null,
-    odometro:      parseInt(document.getElementById('veh-km').value) || 0,
-    ciudad:        document.getElementById('veh-ciudad').value.trim().toUpperCase() || null,
+    modelo:   document.getElementById('veh-modelo').value.trim() || null,
+    anio:     parseInt(document.getElementById('veh-anio').value) || null,
+    odometro: parseInt(document.getElementById('veh-km').value) || 0,
+    ciudad:   document.getElementById('veh-ciudad').value.trim().toUpperCase() || null,
     estado,
-    observaciones: document.getElementById('veh-obs').value.trim() || null,
   };
 
   try {

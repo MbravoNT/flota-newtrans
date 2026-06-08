@@ -421,6 +421,7 @@
   <button class="nav-btn active" onclick="showTab('vehiculos')">🚛 Vehículos</button>
   <button class="nav-btn" onclick="showTab('mantencion')">🔧 Mantención</button>
   <button class="nav-btn" onclick="showTab('ciudades')">📍 Ciudades</button>
+  <button class="nav-btn" onclick="showTab('odometros')">⛽ Odómetros</button>
 </nav>
 
 <!-- MAIN -->
@@ -572,6 +573,81 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+
+  <!-- ═══════════════ TAB: ODÓMETROS ═══════════════ -->
+  <div id="tab-odometros" class="tab">
+    <div class="page-title">
+      Actualización de Odómetros
+      <span class="sub">Carga masiva desde archivo Aranco</span>
+    </div>
+
+    <!-- Instrucciones -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;">
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px;color:var(--accent)">¿Cómo funciona?</div>
+      <ol style="color:var(--muted);font-size:13px;line-height:2;padding-left:20px;">
+        <li>Exporta el reporte de odómetros desde <strong style="color:var(--text)">Aranco</strong></li>
+        <li>El archivo debe tener al menos dos columnas: <strong style="color:var(--text)">Patente</strong> y <strong style="color:var(--text)">Odómetro</strong> (cualquier nombre)</li>
+        <li>Selecciona el archivo CSV o Excel abajo</li>
+        <li>Mapea qué columna es la patente y cuál el odómetro</li>
+        <li>Haz clic en <strong style="color:var(--text)">Actualizar Odómetros</strong> y la app actualiza Supabase automáticamente</li>
+      </ol>
+    </div>
+
+    <!-- Upload zone -->
+    <div style="background:var(--surface);border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;margin-bottom:24px;transition:border-color .2s;cursor:pointer"
+         id="drop-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+         ondragleave="this.style.borderColor='var(--border)'"
+         ondrop="handleDrop(event)">
+      <div style="font-size:32px;margin-bottom:8px">📂</div>
+      <div style="font-family:var(--font-head);font-size:15px;color:var(--text);margin-bottom:4px">Arrastra tu archivo aquí o haz clic para seleccionar</div>
+      <div style="font-size:12px;color:var(--muted)">CSV o Excel (.xlsx, .xls)</div>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])" />
+    </div>
+
+    <!-- Mapeo de columnas -->
+    <div id="col-mapper" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;">
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:16px;">Mapear columnas</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:500px;">
+        <div class="form-group">
+          <label>Columna de Patente *</label>
+          <select id="col-patente" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label>Columna de Odómetro *</label>
+          <select id="col-odometro" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;width:100%"></select>
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="margin-top:12px" onclick="previewData()">👁 Vista previa</button>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-section" style="display:none;margin-bottom:24px;">
+      <div class="section-head">
+        <div class="section-title">Vista previa</div>
+        <div class="count-chip" id="preview-count"></div>
+      </div>
+      <div class="table-wrap" style="max-height:320px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Patente (archivo)</th>
+              <th>Odómetro</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-preview"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;align-items:center;">
+        <button class="btn btn-primary" onclick="runUpdate()" id="btn-update">⬆ Actualizar Odómetros</button>
+        <span id="update-progress" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+    </div>
+
   </div>
 
 </main>
@@ -1149,6 +1225,134 @@ function closeModal(id) {
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// ODÓMETROS
+// ═══════════════════════════════════════════════════════════════
+let parsedRows = [];
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  document.getElementById('drop-zone').querySelector('div:nth-child(2)').textContent = '📄 ' + file.name;
+  parsedRows = [];
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    const text = await file.text();
+    const lines = text.trim().split(/\r?\n/);
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(sep).map(v => v.trim().replace(/^"|"$/g,''));
+      const row = {};
+      headers.forEach((h,j) => row[h] = vals[j] || '');
+      parsedRows.push(row);
+    }
+    populateColSelects(headers);
+  } else {
+    // Excel — usar SheetJS
+    if (!window.XLSX) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    }
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: 'array' });
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    parsedRows = data;
+    populateColSelects(Object.keys(data[0] || {}));
+  }
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function populateColSelects(headers) {
+  const opts = headers.map(h => `<option value="${h}">${h}</option>`).join('');
+  document.getElementById('col-patente').innerHTML  = opts;
+  document.getElementById('col-odometro').innerHTML = opts;
+
+  // Auto-detectar columnas comunes
+  const pGuess = headers.find(h => /patente|paten|placa|ppuu/i.test(h));
+  const oGuess = headers.find(h => /odóm|odom|km|kilo|medidor/i.test(h));
+  if (pGuess) document.getElementById('col-patente').value  = pGuess;
+  if (oGuess) document.getElementById('col-odometro').value = oGuess;
+
+  document.getElementById('col-mapper').style.display = 'block';
+  document.getElementById('preview-section').style.display = 'none';
+}
+
+function previewData() {
+  const colPat = document.getElementById('col-patente').value;
+  const colOdo = document.getElementById('col-odometro').value;
+  if (!colPat || !colOdo) { toast('Selecciona las columnas', 'error'); return; }
+
+  const patentesBD = new Set(allVehiculos.map(v => v.patente));
+  const tbody = document.getElementById('tbody-preview');
+  let encontrados = 0, noEncontrados = 0;
+
+  tbody.innerHTML = parsedRows.map(row => {
+    const pat = String(row[colPat] || '').trim().toUpperCase();
+    const odo = String(row[colOdo] || '').replace(/[^0-9]/g,'');
+    const encontrado = patentesBD.has(pat);
+    if (encontrado) encontrados++; else noEncontrados++;
+    return `<tr>
+      <td><strong>${pat}</strong></td>
+      <td>${odo ? Number(odo).toLocaleString('es-CL') + ' km' : '—'}</td>
+      <td>${encontrado
+        ? '<span class="badge badge-green">✓ Encontrado</span>'
+        : '<span class="badge badge-red">✗ No encontrado</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('preview-count').textContent = `${encontrados} coinciden · ${noEncontrados} no encontrados`;
+  document.getElementById('preview-section').style.display = 'block';
+}
+
+async function runUpdate() {
+  const colPat = document.getElementById('col-patente').value;
+  const colOdo = document.getElementById('col-odometro').value;
+  const btn    = document.getElementById('btn-update');
+  const prog   = document.getElementById('update-progress');
+  const patentesBD = new Set(allVehiculos.map(v => v.patente));
+
+  const validos = parsedRows
+    .map(row => ({
+      patente: String(row[colPat] || '').trim().toUpperCase(),
+      km: parseInt(String(row[colOdo] || '').replace(/[^0-9]/g,''))
+    }))
+    .filter(r => r.patente && !isNaN(r.km) && patentesBD.has(r.patente));
+
+  if (!validos.length) { toast('No hay filas válidas para actualizar', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Actualizando…';
+  let ok = 0, err = 0;
+
+  for (let i = 0; i < validos.length; i++) {
+    const { patente, km } = validos[i];
+    prog.textContent = `${i + 1} / ${validos.length}`;
+    const { error } = await sb.from('vehiculos').update({ km_actual: km }).eq('patente', patente);
+    if (error) err++; else ok++;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⬆ Actualizar Odómetros';
+  prog.textContent = '';
+  toast(`✓ ${ok} vehículos actualizados${err ? ' · ' + err + ' errores' : ''}`, ok ? 'success' : 'error');
+  await loadVehiculos();
+}
 
 // ─── START ─────────────────────────────────────────────────────
 init();

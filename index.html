@@ -469,6 +469,9 @@
         <option>En mantención</option>
         <option>Inactivo</option>
       </select>
+      <select class="filter-sel" id="filter-ciudad-veh" onchange="filterVehiculos()">
+        <option value="">Todas las ciudades</option>
+      </select>
       <button class="btn btn-ghost" onclick="loadVehiculos()">↺ Actualizar</button>
       <button class="btn btn-primary ml-auto" onclick="openModalVeh()">+ Nuevo Vehículo</button>
     </div>
@@ -513,6 +516,9 @@
         <option>Revisión General</option>
         <option>Otro</option>
       </select>
+      <select class="filter-sel" id="filter-ciudad-mant" onchange="filterMantencion()">
+        <option value="">Todas las ciudades</option>
+      </select>
       <button class="btn btn-ghost" onclick="loadMantencion()">↺ Actualizar</button>
       <button class="btn btn-primary ml-auto" onclick="openModalMant()">+ Nuevo Servicio</button>
     </div>
@@ -554,10 +560,11 @@
         <thead>
           <tr>
             <th>Ciudad</th>
-            <th>Código</th>
-            <th>Región</th>
-            <th>Vehículos</th>
-            <th>Activos</th>
+            <th>Total Flota</th>
+            <th>Operativos</th>
+            <th>En Mantención</th>
+            <th>Próximos (&le;1.000 km)</th>
+            <th>Vencidos</th>
           </tr>
         </thead>
         <tbody id="tbody-ciudades">
@@ -810,10 +817,12 @@ function filterVehiculos() {
   const q     = document.getElementById('search-vehiculos').value.toLowerCase();
   const tipo  = document.getElementById('filter-tipo').value;
   const estado= document.getElementById('filter-estado').value;
+  const ciudad = document.getElementById('filter-ciudad-veh').value;
   const list  = allVehiculos.filter(v =>
-    (!q     || [v.patente,v.marca,v.modelo,v.ciudad].join(' ').toLowerCase().includes(q)) &&
-    (!tipo  || v.tipo === tipo) &&
-    (!estado|| v.estado === estado)
+    (!q      || [v.patente,v.marca,v.modelo,v.ciudad].join(' ').toLowerCase().includes(q)) &&
+    (!tipo   || v.tipo === tipo) &&
+    (!estado || v.estado === estado) &&
+    (!ciudad || v.ciudad === ciudad)
   );
   renderVehiculos(list);
 }
@@ -958,9 +967,14 @@ function renderMantencion(list) {
 function filterMantencion() {
   const q    = document.getElementById('search-mant').value.toLowerCase();
   const tipo = document.getElementById('filter-mant-tipo').value;
+  const ciudadMant = document.getElementById('filter-ciudad-mant').value;
+  // Construir mapa patente->ciudad desde allVehiculos
+  const patCiudad = {};
+  allVehiculos.forEach(v => { patCiudad[v.patente] = v.ciudad; });
   const list = allMantencion.filter(m =>
-    (!q    || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
-    (!tipo || m.tipo === tipo)
+    (!q          || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
+    (!tipo       || m.tipo === tipo) &&
+    (!ciudadMant || patCiudad[m.vehiculo_patente] === ciudadMant)
   );
   renderMantencion(list);
 }
@@ -1060,26 +1074,57 @@ async function renderCiudades() {
     return;
   }
   // Enrich with vehicle counts
-  const { data: vehs } = await sb.from('vehiculos').select('ciudad, estado');
-  const countMap = {};
-  const activeMap = {};
-  (vehs || []).forEach(v => {
+  // Usar datos ya cargados en memoria
+  const countMap   = {};
+  const operMap    = {};
+  const mantMap    = {};
+  const proxMap    = {};
+  const vencMap    = {};
+
+  allVehiculos.forEach(v => {
     const k = v.ciudad;
-    countMap[k]  = (countMap[k]  || 0) + 1;
-    if (v.estado === 'Operativo') activeMap[k] = (activeMap[k] || 0) + 1;
+    if (!k) return;
+    countMap[k] = (countMap[k] || 0) + 1;
+    if (v.estado === 'Operativo')     operMap[k] = (operMap[k] || 0) + 1;
+    if (v.estado === 'En mantención') mantMap[k] = (mantMap[k] || 0) + 1;
   });
+
+  // Próximos y vencidos desde mantenciones
+  allMantencion.forEach(m => {
+    const k = (() => {
+      const veh = allVehiculos.find(v => v.patente === m.vehiculo_patente);
+      return veh ? veh.ciudad : null;
+    })();
+    if (!k) return;
+    const kf = parseFloat(m.km_faltantes);
+    if (!isNaN(kf)) {
+      if (kf <= 0)    vencMap[k]  = (vencMap[k]  || 0) + 1;
+      else if (kf <= 1000) proxMap[k] = (proxMap[k] || 0) + 1;
+    }
+  });
+
   tbody.innerHTML = allCiudades.map(c => `
     <tr>
       <td><strong>${c.nombre}</strong></td>
-      <td>${c.codigo || '—'}</td>
-      <td>${c.region || '—'}</td>
       <td>${countMap[c.nombre] || 0}</td>
-      <td><span class="badge badge-green">${activeMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-green">${operMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-orange">${mantMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-orange">${proxMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-red">${vencMap[c.nombre] || 0}</span></td>
     </tr>
   `).join('');
 }
 
 // ─── HELPERS ───────────────────────────────────────────────────
+function populateCiudadFilters() {
+  const ciudades = [...new Set(allVehiculos.map(v => v.ciudad).filter(Boolean))].sort();
+  const opts = '<option value="">Todas las ciudades</option>' + ciudades.map(c => `<option value="${c}">${c}</option>`).join('');
+  const selVeh  = document.getElementById('filter-ciudad-veh');
+  const selMant = document.getElementById('filter-ciudad-mant');
+  if (selVeh)  selVeh.innerHTML  = opts;
+  if (selMant) selMant.innerHTML = opts;
+}
+
 function populateCiudadSelect() {
   const sel = document.getElementById('veh-ciudad');
   sel.innerHTML = '<option value="">Sin ciudad</option>' +

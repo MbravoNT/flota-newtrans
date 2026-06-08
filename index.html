@@ -434,6 +434,11 @@
 <header>
   <div class="logo">NT<span>Fleet</span></div>
   <div class="header-right">
+    <div id="user-info" style="display:none;align-items:center;gap:8px;">
+      <span id="user-nombre" style="font-size:12px;color:var(--muted)"></span>
+      <span id="user-rol-badge" class="badge badge-blue" style="font-size:10px;"></span>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="doLogout()">Salir</button>
+    </div>
     <div id="status-dot"></div>
     <span id="status-label">Conectando…</span>
   </div>

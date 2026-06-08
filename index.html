@@ -920,21 +920,39 @@ function renderMantencion(list) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin registros de mantención</td></tr>';
     return;
   }
-  tbody.innerHTML = list.map(m => `
-    <tr>
+  tbody.innerHTML = list.map(m => {
+    const kf = parseFloat(m.km_faltantes);
+    let rowColor = '';
+    let kmBadge = '';
+    if (!isNaN(kf)) {
+      if (kf <= 0) {
+        rowColor = 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)';
+        kmBadge = `<span class="badge badge-red">${fmtKm(m.km_faltantes)} VENCIDO</span>`;
+      } else if (kf <= 1000) {
+        rowColor = 'background:rgba(249,115,22,0.07);border-left:3px solid var(--orange)';
+        kmBadge = `<span class="badge badge-orange">${fmtKm(m.km_faltantes)} PRÓXIMO</span>`;
+      } else {
+        rowColor = 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)';
+        kmBadge = `<span class="badge badge-green">${fmtKm(m.km_faltantes)}</span>`;
+      }
+    } else {
+      kmBadge = '—';
+    }
+    return `
+    <tr style="${rowColor}">
       <td>${fmtDate(m.fecha_ultima)}</td>
       <td><strong>${m.vehiculo_patente || '—'}</strong></td>
       <td>${m.tipo || '—'}</td>
       <td>${fmtKm(m.km_ultima)}</td>
       <td>${fmtKm(m.km_proxima)}</td>
-      <td>${fmtKm(m.km_faltantes)}</td>
+      <td>${kmBadge}</td>
       <td>${m.estado_mant || '—'}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editMantencion(${m.id})">✏️</button>
         <button class="btn btn-danger" onclick="deleteMantencion(${m.id})">✕</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function filterMantencion() {

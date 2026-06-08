@@ -718,7 +718,10 @@ async function init() {
     setConnected(false);
     console.warn('Supabase:', e.message);
   }
-  await Promise.all([loadCiudades(), loadVehiculos(), loadMantencion()]);
+  await loadCiudades();
+  await loadVehiculos();
+  await loadMantencion();
+  renderCiudades();
 }
 
 function setConnected(ok) {
@@ -1060,7 +1063,6 @@ async function loadCiudades() {
       .order('nombre');
     if (error) throw error;
     allCiudades = data || [];
-    renderCiudades();
     populateCiudadSelect();
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="5" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
@@ -1121,8 +1123,10 @@ function populateCiudadFilters() {
   const opts = '<option value="">Todas las ciudades</option>' + ciudades.map(c => `<option value="${c}">${c}</option>`).join('');
   const selVeh  = document.getElementById('filter-ciudad-veh');
   const selMant = document.getElementById('filter-ciudad-mant');
-  if (selVeh)  selVeh.innerHTML  = opts;
-  if (selMant) selMant.innerHTML = opts;
+  const prevVeh  = selVeh  ? selVeh.value  : '';
+  const prevMant = selMant ? selMant.value : '';
+  if (selVeh)  { selVeh.innerHTML  = opts; selVeh.value  = prevVeh;  }
+  if (selMant) { selMant.innerHTML = opts; selMant.value = prevMant; }
 }
 
 function populateCiudadSelect() {

@@ -742,7 +742,15 @@ function toast(msg, type='success') {
 // ─── FORMAT ────────────────────────────────────────────────────
 function fmtKm(n) { return n ? Number(n).toLocaleString('es-CL') + ' km' : '—'; }
 function fmtClp(n) { return n ? '$ ' + Number(n).toLocaleString('es-CL') : '—'; }
-function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('es-CL') : '—'; }
+function fmtDate(d) {
+  if (!d) return '—';
+  // Soporta DD/MM/YYYY y YYYY-MM-DD
+  if (d.includes('/')) {
+    const [day, month, year] = d.split('/');
+    return `${day}/${month}/${year}`;
+  }
+  return new Date(d + 'T12:00:00').toLocaleDateString('es-CL');
+}
 
 function estadoBadge(e) {
   const map = {

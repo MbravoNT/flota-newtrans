@@ -853,9 +853,17 @@ async function onLogin(user) {
     document.getElementById('user-rol-badge').textContent = perfil.rol;
     document.getElementById('user-info').style.display = 'flex';
 
-    // Ocultar acciones de eliminación para Operadores
+    // Ocultar acciones de eliminación para Operadores y fijar filtro ciudad
     if (perfil.rol === 'Operador') {
       document.querySelectorAll('.btn-danger').forEach(b => b.style.display = 'none');
+      // Fijar filtro de ciudad automáticamente después de cargar datos
+      setTimeout(() => {
+        const ciudad = perfil.ciudad;
+        const selVeh  = document.getElementById('filter-ciudad-veh');
+        const selMant = document.getElementById('filter-ciudad-mant');
+        if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; filterVehiculos(); }
+        if (selMant) { selMant.value = ciudad; selMant.disabled = true; filterMantencion(); }
+      }, 1000);
     }
   }
 

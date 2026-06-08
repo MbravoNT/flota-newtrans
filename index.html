@@ -465,8 +465,8 @@
       </select>
       <select class="filter-sel" id="filter-estado" onchange="filterVehiculos()">
         <option value="">Todos los estados</option>
-        <option>Activo</option>
-        <option>En Mantención</option>
+        <option>Operativo</option>
+        <option>En mantención</option>
         <option>Inactivo</option>
       </select>
       <button class="btn btn-ghost" onclick="loadVehiculos()">↺ Actualizar</button>
@@ -613,8 +613,8 @@
         <label>Estado *</label>
         <select id="veh-estado">
           <option value="">Seleccionar…</option>
-          <option>Activo</option>
-          <option>En Mantención</option>
+          <option>Operativo</option>
+          <option>En mantención</option>
           <option>Inactivo</option>
         </select>
       </div>
@@ -741,9 +741,8 @@ function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('e
 
 function estadoBadge(e) {
   const map = {
-    'Activo':        'badge-green',
-    'En Mantención': 'badge-orange',
-    'Inactivo':      'badge-red',
+    'Operativo':      'badge-green',
+    'En mantención':  'badge-orange',
   };
   return `<span class="badge ${map[e] || 'badge-muted'}">${e || '—'}</span>`;
 }
@@ -807,10 +806,10 @@ function filterVehiculos() {
 }
 
 function updateStats() {
-  document.getElementById('s-total').textContent  = allVehiculos.length;
-  document.getElementById('s-activos').textContent = allVehiculos.filter(v => v.estado === 'Activo').length;
-  document.getElementById('s-mant').textContent   = allVehiculos.filter(v => v.estado === 'En Mantención').length;
-  document.getElementById('s-inact').textContent  = allVehiculos.filter(v => v.estado === 'Inactivo').length;
+  document.getElementById('s-total').textContent   = allVehiculos.length;
+  document.getElementById('s-activos').textContent = allVehiculos.filter(v => v.estado === 'Operativo').length;
+  document.getElementById('s-mant').textContent    = allVehiculos.filter(v => v.estado === 'En mantención').length;
+  document.getElementById('s-inact').textContent   = allVehiculos.filter(v => v.estado !== 'Operativo' && v.estado !== 'En mantención').length;
 }
 
 function openModalVeh() {
@@ -891,7 +890,7 @@ async function loadMantencion() {
   tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
   try {
     const { data, error } = await sb
-      .from('mantencion')
+      .from('mantenciones')
       .select('*, vehiculos(patente)')
       .order('fecha', { ascending: false });
     if (error) throw error;
@@ -982,9 +981,9 @@ async function saveMantencion() {
   try {
     let error;
     if (id) {
-      ({ error } = await sb.from('mantencion').update(payload).eq('id', id));
+      ({ error } = await sb.from('mantenciones').update(payload).eq('id', id));
     } else {
-      ({ error } = await sb.from('mantencion').insert(payload));
+      ({ error } = await sb.from('mantenciones').insert(payload));
     }
     if (error) throw error;
     closeModal('modal-mant');
@@ -997,7 +996,7 @@ async function saveMantencion() {
 
 async function deleteMantencion(id) {
   if (!confirm('¿Eliminar este registro de mantención?')) return;
-  const { error } = await sb.from('mantencion').delete().eq('id', id);
+  const { error } = await sb.from('mantenciones').delete().eq('id', id);
   if (error) { toast(error.message, 'error'); return; }
   toast('Registro eliminado');
   await loadMantencion();

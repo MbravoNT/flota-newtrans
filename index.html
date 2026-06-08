@@ -886,7 +886,9 @@ async function doLogin() {
     errEl.style.display = 'block';
     btn.textContent = 'Ingresar';
     btn.disabled = false;
-  } else if (!data?.session) {
+  } else if (data?.user) {
+    await onLogin(data.user);
+  } else {
     errEl.textContent = 'No se obtuvo sesión. Intenta de nuevo.';
     errEl.style.display = 'block';
     btn.textContent = 'Ingresar';

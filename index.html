@@ -404,6 +404,29 @@
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;">
+  <div style="width:380px;max-width:95vw;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-family:var(--font-head);font-size:36px;font-weight:800;color:var(--accent)">NT<span style="color:var(--text)">Fleet</span></div>
+      <div style="color:var(--muted);font-size:13px;margin-top:6px;">Newtrans Logistic Chile</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;">
+      <div style="font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:20px;">Iniciar Sesión</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Correo</label>
+        <input type="email" id="login-email" placeholder="usuario@newtrans.cl" />
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doLogin()" id="login-btn">Ingresar</button>
+      <div id="login-error" style="color:var(--red);font-size:12px;margin-top:12px;text-align:center;display:none;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -785,19 +808,89 @@ let allMantencion = [];
 let allCiudades = [];
 
 // ─── INIT ──────────────────────────────────────────────────────
+// Estado global usuario
+let currentUser = null;
+let currentPerfil = null;
+
 async function init() {
-  try {
-    const { data, error } = await sb.from('ciudades').select('id').limit(1);
-    if (error) throw error;
-    setConnected(true);
-  } catch(e) {
-    setConnected(false);
-    console.warn('Supabase:', e.message);
+  // Verificar sesión activa
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await onLogin(session.user);
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
   }
+
+  // Escuchar cambios de sesión
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      await onLogin(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      location.reload();
+    }
+  });
+}
+
+async function onLogin(user) {
+  currentUser = user;
+
+  // Cargar perfil
+  const { data: perfil } = await sb
+    .from('perfiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+  currentPerfil = perfil;
+
+  // Mostrar info usuario
+  if (perfil) {
+    document.getElementById('user-nombre').textContent = perfil.nombre;
+    document.getElementById('user-rol-badge').textContent = perfil.rol;
+    document.getElementById('user-info').style.display = 'flex';
+
+    // Ocultar acciones de eliminación para Operadores
+    if (perfil.rol === 'Operador') {
+      document.querySelectorAll('.btn-danger').forEach(b => b.style.display = 'none');
+    }
+  }
+
+  // Ocultar login y mostrar app
+  document.getElementById('login-screen').style.display = 'none';
+  setConnected(true);
+
   await loadCiudades();
   await loadVehiculos();
   await loadMantencion();
   renderCiudades();
+}
+
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn      = document.getElementById('login-btn');
+  const errEl    = document.getElementById('login-error');
+
+  if (!email || !password) {
+    errEl.textContent = 'Ingresa correo y contraseña';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = 'Ingresando…';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = 'Correo o contraseña incorrectos';
+    errEl.style.display = 'block';
+    btn.textContent = 'Ingresar';
+    btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
 }
 
 function setConnected(ok) {

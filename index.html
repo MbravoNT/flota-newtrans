@@ -487,7 +487,7 @@
             <th>Marca / Modelo</th>
             <th>Año</th>
             <th>Ciudad</th>
-            <th>KM Actual</th>
+            <th>Odómetro</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
@@ -882,7 +882,7 @@ function renderVehiculos(list) {
       <td>${[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
       <td>${v.anio || '—'}</td>
       <td>${v.ciudad || '—'}</td>
-      <td>${fmtKm(v.km_actual)}</td>
+      <td>${fmtKm(v.odometro)}</td>
       <td>${estadoBadge(v.estado)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editVehiculo(${v.id})">✏️</button>
@@ -932,7 +932,7 @@ function editVehiculo(id) {
   document.getElementById('veh-marca').value   = v.marca || '';
   document.getElementById('veh-modelo').value  = v.modelo || '';
   document.getElementById('veh-anio').value    = v.anio || '';
-  document.getElementById('veh-km').value      = v.km_actual || '';
+  document.getElementById('veh-km').value      = v.odometro || '';
   document.getElementById('veh-ciudad').value  = v.ciudad || '';
   document.getElementById('veh-estado').value  = v.estado || '';
   document.getElementById('veh-obs').value     = v.observaciones || '';
@@ -953,7 +953,7 @@ async function saveVehiculo() {
     marca:         document.getElementById('veh-marca').value.trim() || null,
     modelo:        document.getElementById('veh-modelo').value.trim() || null,
     anio:          parseInt(document.getElementById('veh-anio').value) || null,
-    km_actual:     parseInt(document.getElementById('veh-km').value) || 0,
+    odometro:      parseInt(document.getElementById('veh-km').value) || 0,
     ciudad:        document.getElementById('veh-ciudad').value.trim().toUpperCase() || null,
     estado,
     observaciones: document.getElementById('veh-obs').value.trim() || null,
@@ -1343,7 +1343,7 @@ async function runUpdate() {
   for (let i = 0; i < validos.length; i++) {
     const { patente, km } = validos[i];
     prog.textContent = `${i + 1} / ${validos.length}`;
-    const { error } = await sb.from('vehiculos').update({ km_actual: km }).eq('patente', patente);
+    const { error } = await sb.from('vehiculos').update({ odometro: km }).eq('patente', patente);
     if (error) err++; else ok++;
   }
 

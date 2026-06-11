@@ -556,12 +556,12 @@
       <table>
         <thead>
           <tr>
-            <th>Última Fecha</th>
+            <th>Última Actualización</th>
             <th>Patente</th>
-            <th>Tipo</th>
-            <th>KM Última</th>
-            <th>KM Próxima</th>
-            <th>KM Faltantes</th>
+            <th>Ciudad</th>
+            <th>KM Última Mantención</th>
+            <th>KM Actual</th>
+            <th>KM Faltante</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
@@ -1127,33 +1127,46 @@ function renderMantencion(list) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin registros de mantención</td></tr>';
     return;
   }
+  // Construir mapa patente -> vehiculo para cruzar odómetro y ciudad
+  const vehMap = {};
+  allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
   tbody.innerHTML = list.map(m => {
-    const kf = parseFloat(m.km_faltantes);
+    const veh = vehMap[m.vehiculo_patente] || {};
+    const kmActual  = parseFloat(veh.odometro) || 0;
+    const kmProxima = parseFloat(m.km_proxima) || 0;
+    const kf = kmProxima - kmActual;
+
     let rowColor = '';
-    let kmBadge = '';
-    if (!isNaN(kf)) {
-      if (kf <= 0) {
-        rowColor = 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)';
-        kmBadge = `<span class="badge badge-red">${fmtKm(m.km_faltantes)} VENCIDO</span>`;
-      } else if (kf <= 1000) {
-        rowColor = 'background:rgba(249,115,22,0.07);border-left:3px solid var(--orange)';
-        kmBadge = `<span class="badge badge-orange">${fmtKm(m.km_faltantes)} PRÓXIMO</span>`;
-      } else {
-        rowColor = 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)';
-        kmBadge = `<span class="badge badge-green">${fmtKm(m.km_faltantes)}</span>`;
-      }
+    let estadoBadge = '';
+    if (kmProxima === 0) {
+      estadoBadge = '<span class="badge badge-muted">Sin dato</span>';
+    } else if (kf <= 0) {
+      rowColor    = 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)';
+      estadoBadge = '<span class="badge badge-red">🔴 Vencido</span>';
+    } else if (kf <= 1000) {
+      rowColor    = 'background:rgba(249,115,22,0.07);border-left:3px solid var(--orange)';
+      estadoBadge = '<span class="badge badge-orange">🟠 Próximo</span>';
     } else {
-      kmBadge = '—';
+      rowColor    = 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)';
+      estadoBadge = '<span class="badge badge-green">🟢 Al día</span>';
     }
+
+    const kmFaltanteStr = kmProxima > 0
+      ? (kf <= 0
+          ? `<span style="color:var(--red)">-${fmtKm(Math.abs(kf))}</span>`
+          : fmtKm(kf))
+      : '—';
+
     return `
     <tr style="${rowColor}">
       <td>${fmtDate(m.fecha_ultima)}</td>
       <td><strong>${m.vehiculo_patente || '—'}</strong></td>
-      <td>${m.tipo || '—'}</td>
+      <td>${veh.ciudad || '—'}</td>
       <td>${fmtKm(m.km_ultima)}</td>
-      <td>${fmtKm(m.km_proxima)}</td>
-      <td>${kmBadge}</td>
-      <td>${m.estado_mant || '—'}</td>
+      <td>${fmtKm(veh.odometro)}</td>
+      <td>${kmFaltanteStr}</td>
+      <td>${estadoBadge}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editMantencion(${m.id})">✏️</button>
         <button class="btn btn-danger" onclick="deleteMantencion(${m.id})">✕</button>
@@ -1170,7 +1183,7 @@ function filterMantencion() {
   const patCiudad = {};
   allVehiculos.forEach(v => { patCiudad[v.patente] = v.ciudad; });
   const list = allMantencion.filter(m =>
-    (!q          || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
+    (!q          || [m.vehiculo_patente, m.tipo, patCiudad[m.vehiculo_patente]].join(' ').toLowerCase().includes(q)) &&
     (!tipo       || m.tipo === tipo) &&
     (!ciudadMant || patCiudad[m.vehiculo_patente] === ciudadMant)
   );

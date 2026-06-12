@@ -501,7 +501,7 @@
       <select class="filter-sel" id="filter-ciudad-veh" onchange="filterVehiculos()">
         <option value="">Todas las ciudades</option>
       </select>
-      <button class="btn btn-ghost" onclick="loadVehiculos()">↺ Actualizar</button>
+      <button class="btn btn-ghost" onclick="loadVehiculos().then(reaplicarFiltroOperador)">↺ Actualizar</button>
       <button class="btn btn-primary ml-auto" onclick="openModalVeh()">+ Nuevo Vehículo</button>
     </div>
 
@@ -548,7 +548,7 @@
       <select class="filter-sel" id="filter-ciudad-mant" onchange="filterMantencion()">
         <option value="">Todas las ciudades</option>
       </select>
-      <button class="btn btn-ghost" onclick="loadMantencion()">↺ Actualizar</button>
+      <button class="btn btn-ghost" onclick="loadMantencion().then(reaplicarFiltroOperador)">↺ Actualizar</button>
       <button class="btn btn-primary ml-auto" onclick="openModalMant()">+ Nuevo Servicio</button>
     </div>
 
@@ -853,22 +853,12 @@ async function onLogin(user) {
     document.getElementById('user-rol-badge').textContent = perfil.rol;
     document.getElementById('user-info').style.display = 'flex';
 
-    // Ocultar acciones de eliminación y pestaña odómetros para Operadores
+    // Ocultar pestaña odómetros para Operadores
     if (perfil.rol === 'Operador') {
-      document.querySelectorAll('.btn-danger').forEach(b => b.style.display = 'none');
-      // Ocultar pestaña odómetros
       document.querySelectorAll('.nav-btn').forEach(b => {
         if (b.textContent.includes('Odómetros')) b.style.display = 'none';
       });
       document.getElementById('tab-odometros').style.display = 'none';
-      // Fijar filtro de ciudad automáticamente después de cargar datos
-      setTimeout(() => {
-        const ciudad = perfil.ciudad;
-        const selVeh  = document.getElementById('filter-ciudad-veh');
-        const selMant = document.getElementById('filter-ciudad-mant');
-        if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; filterVehiculos(); }
-        if (selMant) { selMant.value = ciudad; selMant.disabled = true; filterMantencion(); }
-      }, 1000);
     }
   }
 
@@ -880,6 +870,18 @@ async function onLogin(user) {
   await loadVehiculos();
   await loadMantencion();
   renderCiudades();
+
+  // Fijar filtro de ciudad para Operador y refiltrar tablas ya cargadas
+  if (perfil?.rol === 'Operador') {
+    const ciudad = perfil.ciudad;
+    const selVeh  = document.getElementById('filter-ciudad-veh');
+    const selMant = document.getElementById('filter-ciudad-mant');
+    if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; }
+    if (selMant) { selMant.value = ciudad; selMant.disabled = true; }
+    filterVehiculos();
+    filterMantencion();
+    renderCiudades();
+  }
 }
 
 async function doLogin() {
@@ -916,6 +918,20 @@ async function doLogin() {
 
 async function doLogout() {
   await sb.auth.signOut();
+}
+
+// Reaplica el filtro de ciudad fijo si el usuario es Operador
+function reaplicarFiltroOperador() {
+  if (currentPerfil?.rol === 'Operador') {
+    const ciudad = currentPerfil.ciudad;
+    const selVeh  = document.getElementById('filter-ciudad-veh');
+    const selMant = document.getElementById('filter-ciudad-mant');
+    if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; }
+    if (selMant) { selMant.value = ciudad; selMant.disabled = true; }
+    filterVehiculos();
+    filterMantencion();
+    renderCiudades();
+  }
 }
 
 function setConnected(ok) {
@@ -1004,7 +1020,7 @@ function renderVehiculos(list) {
       <td>${estadoBadge(v.estado)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editVehiculo(${v.id})">✏️</button>
-        <button class="btn btn-danger" onclick="deleteVehiculo(${v.id},'${v.patente}')">✕</button>
+        ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteVehiculo(${v.id},'${v.patente}')">✕</button>`}
       </td>
     </tr>
   `).join('');
@@ -1088,6 +1104,7 @@ async function saveVehiculo() {
     closeModal('modal-veh');
     toast(id ? 'Vehículo actualizado' : 'Vehículo creado');
     await loadVehiculos();
+    reaplicarFiltroOperador();
   } catch(e) {
     toast(e.message, 'error');
   }
@@ -1099,6 +1116,7 @@ async function deleteVehiculo(id, patente) {
   if (error) { toast(error.message, 'error'); return; }
   toast(`${patente} eliminado`);
   await loadVehiculos();
+  reaplicarFiltroOperador();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1169,7 +1187,7 @@ function renderMantencion(list) {
       <td>${estadoBadge}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editMantencion(${m.id})">✏️</button>
-        <button class="btn btn-danger" onclick="deleteMantencion(${m.id})">✕</button>
+        ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteMantencion(${m.id})">✕</button>`}
       </td>
     </tr>`;
   }).join('');
@@ -1246,6 +1264,7 @@ async function saveMantencion() {
     closeModal('modal-mant');
     toast(id ? 'Servicio actualizado' : 'Servicio registrado');
     await loadMantencion();
+    reaplicarFiltroOperador();
   } catch(e) {
     toast(e.message, 'error');
   }
@@ -1257,6 +1276,7 @@ async function deleteMantencion(id) {
   if (error) { toast(error.message, 'error'); return; }
   toast('Registro eliminado');
   await loadMantencion();
+  reaplicarFiltroOperador();
 }
 
 // ═══════════════════════════════════════════════════════════════

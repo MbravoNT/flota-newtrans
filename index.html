@@ -1151,15 +1151,19 @@ function renderMantencion(list) {
 
   tbody.innerHTML = list.map(m => {
     const veh = vehMap[m.vehiculo_patente] || {};
-    const kmActual  = parseFloat(veh.odometro) || 0;
-    const kmProxima = parseFloat(m.km_proxima) || 0;
-    const kf = kmProxima - kmActual;
+    const kmActual = parseFloat(veh.odometro) || 0;
+    const kmUltima = parseFloat(m.km_ultima) || 0;
+
+    // Intervalo según tipo de vehículo
+    const tipo = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipo === 'camion' || tipo === 'camión' || tipo === 'tracto') ? 20000 : 10000;
+
+    const kmRecorridos = kmActual - kmUltima;
+    const kf = intervalo - kmRecorridos;
 
     let rowColor = '';
     let estadoBadge = '';
-    if (kmProxima === 0) {
-      estadoBadge = '<span class="badge badge-muted">Sin dato</span>';
-    } else if (kf <= 0) {
+    if (kf <= 0) {
       rowColor    = 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)';
       estadoBadge = '<span class="badge badge-red">🔴 Vencido</span>';
     } else if (kf <= 1000) {
@@ -1170,11 +1174,9 @@ function renderMantencion(list) {
       estadoBadge = '<span class="badge badge-green">🟢 Al día</span>';
     }
 
-    const kmFaltanteStr = kmProxima > 0
-      ? (kf <= 0
-          ? `<span style="color:var(--red)">-${fmtKm(Math.abs(kf))}</span>`
-          : fmtKm(kf))
-      : '—';
+    const kmFaltanteStr = kf <= 0
+      ? `<span style="color:var(--red)">-${fmtKm(Math.abs(kf))}</span>`
+      : fmtKm(kf);
 
     return `
     <tr style="${rowColor}">
@@ -1319,18 +1321,23 @@ async function renderCiudades() {
     if (v.estado === 'En mantención') mantMap[k] = (mantMap[k] || 0) + 1;
   });
 
-  // Próximos y vencidos desde mantenciones
+  // Próximos y vencidos desde mantenciones (misma fórmula que la tabla de Mantención)
+  const vehMapCiu = {};
+  allVehiculos.forEach(v => { vehMapCiu[v.patente] = v; });
+
   allMantencion.forEach(m => {
-    const k = (() => {
-      const veh = allVehiculos.find(v => v.patente === m.vehiculo_patente);
-      return veh ? veh.ciudad : null;
-    })();
-    if (!k) return;
-    const kf = parseFloat(m.km_faltantes);
-    if (!isNaN(kf)) {
-      if (kf <= 0)    vencMap[k]  = (vencMap[k]  || 0) + 1;
-      else if (kf <= 1000) proxMap[k] = (proxMap[k] || 0) + 1;
-    }
+    const veh = vehMapCiu[m.vehiculo_patente];
+    if (!veh || !veh.ciudad) return;
+    const k = veh.ciudad;
+
+    const kmActual = parseFloat(veh.odometro) || 0;
+    const kmUltima = parseFloat(m.km_ultima) || 0;
+    const tipo = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipo === 'camion' || tipo === 'camión' || tipo === 'tracto') ? 20000 : 10000;
+    const kf = intervalo - (kmActual - kmUltima);
+
+    if (kf <= 0)        vencMap[k] = (vencMap[k] || 0) + 1;
+    else if (kf <= 1000) proxMap[k] = (proxMap[k] || 0) + 1;
   });
 
   const ciudadesVisibles = (currentPerfil?.rol === 'Operador')

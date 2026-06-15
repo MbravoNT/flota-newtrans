@@ -881,7 +881,7 @@
     <div class="form-grid">
       <div class="form-group">
         <label>Patente *</label>
-        <input type="text" id="doc-patente" placeholder="AB CD 12" style="text-transform:uppercase" />
+        <select id="doc-patente"></select>
       </div>
       <div class="form-group">
         <label>Tipo Documento *</label>
@@ -1670,15 +1670,18 @@ async function loadDocumentos() {
 }
 
 function updateStatsDoc() {
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const vehMap = {}; allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+  const lista = (currentPerfil?.rol === 'Operador')
+    ? allDocumentos.filter(d => (vehMap[d.vehiculo_patente]?.ciudad) === currentPerfil.ciudad)
+    : allDocumentos;
   let vigente = 0, proximo = 0, vencido = 0;
-  allDocumentos.forEach(d => {
+  lista.forEach(d => {
     const e = docEstado(d.fecha_vencimiento);
     if (e === 'vigente') vigente++;
     else if (e === 'proximo') proximo++;
     else if (e === 'vencido') vencido++;
   });
-  document.getElementById('sd-total').textContent   = allDocumentos.length;
+  document.getElementById('sd-total').textContent   = lista.length;
   document.getElementById('sd-vigente').textContent = vigente;
   document.getElementById('sd-proximo').textContent = proximo;
   document.getElementById('sd-vencido').textContent = vencido;
@@ -1742,13 +1745,24 @@ function populateDocCiudadFilter() {
   sel.value = prev;
 }
 
+function populateDocPatenteSelect(selectedVal = '') {
+  const sel = document.getElementById('doc-patente');
+  // Filtrar vehículos por ciudad del operador, o todos si es gestor/admin
+  const vehs = (currentPerfil?.rol === 'Operador')
+    ? allVehiculos.filter(v => v.ciudad === currentPerfil.ciudad)
+    : allVehiculos;
+  const sorted = [...vehs].sort((a,b) => a.patente.localeCompare(b.patente));
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    sorted.map(v => `<option value="${v.patente}" ${v.patente === selectedVal ? 'selected' : ''}>${v.patente} · ${v.tipo || ''} · ${v.ciudad || ''}</option>`).join('');
+}
+
 function openModalDoc() {
   document.getElementById('modal-doc-title').textContent = 'Nuevo Documento';
   document.getElementById('doc-id').value = '';
-  document.getElementById('doc-patente').value = '';
   document.getElementById('doc-tipo').value = '';
   document.getElementById('doc-fecha').value = '';
   document.getElementById('doc-obs').value = '';
+  populateDocPatenteSelect();
   document.getElementById('modal-doc').classList.add('open');
 }
 
@@ -1756,9 +1770,9 @@ function editDocumento(id) {
   const d = allDocumentos.find(x => x.id === id);
   if (!d) return;
   document.getElementById('modal-doc-title').textContent = 'Editar Documento';
-  document.getElementById('doc-id').value      = d.id;
-  document.getElementById('doc-patente').value = d.vehiculo_patente || '';
-  document.getElementById('doc-tipo').value    = d.tipo || '';
+  document.getElementById('doc-id').value   = d.id;
+  populateDocPatenteSelect(d.vehiculo_patente || '');
+  document.getElementById('doc-tipo').value = d.tipo || '';
   document.getElementById('doc-fecha').value   = d.fecha_vencimiento || '';
   document.getElementById('doc-obs').value     = d.observaciones || '';
   document.getElementById('modal-doc').classList.add('open');
@@ -1766,7 +1780,7 @@ function editDocumento(id) {
 
 async function saveDocumento() {
   const id      = document.getElementById('doc-id').value;
-  const patente = document.getElementById('doc-patente').value.trim().toUpperCase();
+  const patente = document.getElementById('doc-patente').value.trim();
   const tipo    = document.getElementById('doc-tipo').value;
   const fecha   = document.getElementById('doc-fecha').value;
   if (!patente || !tipo || !fecha) { toast('Completa los campos obligatorios', 'error'); return; }

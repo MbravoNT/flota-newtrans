@@ -450,6 +450,7 @@
   <button class="nav-btn" onclick="showTab('mantencion')">🔧 Mantención</button>
   <button class="nav-btn" onclick="showTab('ciudades')">📍 Ciudades</button>
   <button class="nav-btn" onclick="showTab('odometros')">⛽ Odómetros</button>
+  <button class="nav-btn" onclick="showTab('documentos')">📄 Documentos</button>
 </nav>
 
 <!-- MAIN -->
@@ -678,6 +679,78 @@
 
   </div>
 
+  <!-- ═══════════════ TAB: DOCUMENTOS ═══════════════ -->
+  <div id="tab-documentos" class="tab">
+    <div class="page-title">
+      Documentos Vehiculares
+      <span class="sub">Revisión Técnica · Control de Gases · SOAP · Permiso de Circulación</span>
+    </div>
+
+    <!-- Stats documentos -->
+    <div class="stats-grid" id="stats-docs" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
+      <div class="stat-card">
+        <div class="stat-label">Total Registros</div>
+        <div class="stat-value" id="sd-total">—</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--green)">
+        <div class="stat-label">Vigentes</div>
+        <div class="stat-value" id="sd-vigente" style="color:var(--green)">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Por Vencer (≤30 días)</div>
+        <div class="stat-value" id="sd-proximo" style="color:var(--orange)">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vencidos</div>
+        <div class="stat-value" id="sd-vencido" style="color:var(--red)">—</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <input class="search-input" id="search-docs" type="text" placeholder="Buscar patente, tipo…" oninput="filterDocumentos()" />
+      <select class="filter-sel" id="filter-docs-tipo" onchange="filterDocumentos()">
+        <option value="">Todos los tipos</option>
+        <option>Revisión Técnica</option>
+        <option>Control de Gases</option>
+        <option>SOAP</option>
+        <option>Permiso de Circulación</option>
+      </select>
+      <select class="filter-sel" id="filter-docs-estado" onchange="filterDocumentos()">
+        <option value="">Todos los estados</option>
+        <option value="vigente">Vigente</option>
+        <option value="proximo">Por Vencer</option>
+        <option value="vencido">Vencido</option>
+      </select>
+      <select class="filter-sel" id="filter-docs-ciudad" onchange="filterDocumentos()">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadDocumentos().then(reaplicarFiltroOperador)">↺ Actualizar</button>
+      <button class="btn btn-primary ml-auto" onclick="openModalDoc()">+ Nuevo Documento</button>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Patente</th>
+            <th>Ciudad</th>
+            <th>Tipo Documento</th>
+            <th>Vencimiento</th>
+            <th>Días Restantes</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-documentos">
+          <tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <!-- ═══ MODAL VEHÍCULO ═══ -->
@@ -800,6 +873,42 @@
   </div>
 </div>
 
+<!-- ═══ MODAL DOCUMENTO ═══ -->
+<div class="modal-overlay" id="modal-doc">
+  <div class="modal">
+    <h3 id="modal-doc-title">Nuevo Documento</h3>
+    <input type="hidden" id="doc-id" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente *</label>
+        <input type="text" id="doc-patente" placeholder="AB CD 12" style="text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label>Tipo Documento *</label>
+        <select id="doc-tipo">
+          <option value="">Seleccionar…</option>
+          <option>Revisión Técnica</option>
+          <option>Control de Gases</option>
+          <option>SOAP</option>
+          <option>Permiso de Circulación</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fecha Vencimiento *</label>
+        <input type="date" id="doc-fecha" />
+      </div>
+      <div class="form-group full">
+        <label>Observaciones</label>
+        <textarea id="doc-obs" placeholder="Notas adicionales…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-doc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDocumento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── SUPABASE CONFIG ───────────────────────────────────────────
 const SUPABASE_URL = 'https://ahdcofcmxrfhqszevptp.supabase.co';
@@ -869,6 +978,7 @@ async function onLogin(user) {
   await loadCiudades();
   await loadVehiculos();
   await loadMantencion();
+  await loadDocumentos();
   renderCiudades();
 
   // Fijar filtro de ciudad para Operador y refiltrar tablas ya cargadas
@@ -926,10 +1036,13 @@ function reaplicarFiltroOperador() {
     const ciudad = currentPerfil.ciudad;
     const selVeh  = document.getElementById('filter-ciudad-veh');
     const selMant = document.getElementById('filter-ciudad-mant');
+    const selDoc  = document.getElementById('filter-docs-ciudad');
     if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; }
     if (selMant) { selMant.value = ciudad; selMant.disabled = true; }
+    if (selDoc)  { selDoc.value  = ciudad; selDoc.disabled  = true; }
     filterVehiculos();
     filterMantencion();
+    filterDocumentos();
     renderCiudades();
   }
 }
@@ -1514,6 +1627,176 @@ async function runUpdate() {
   prog.textContent = '';
   toast(`✓ ${ok} vehículos actualizados${err ? ' · ' + err + ' errores' : ''}`, ok ? 'success' : 'error');
   await loadVehiculos();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENTOS
+// ═══════════════════════════════════════════════════════════════
+let allDocumentos = [];
+
+function docEstado(fechaStr) {
+  if (!fechaStr) return 'sin_dato';
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(fechaStr + 'T12:00:00');
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (dias < 0)   return 'vencido';
+  if (dias <= 30) return 'proximo';
+  return 'vigente';
+}
+
+function docBadge(fechaStr) {
+  const estado = docEstado(fechaStr);
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(fechaStr + 'T12:00:00');
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (estado === 'vencido')  return { badge: '<span class="badge badge-red">🔴 Vencido</span>',  dias: dias, rowColor: 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)' };
+  if (estado === 'proximo')  return { badge: '<span class="badge badge-orange">🟠 Por Vencer</span>', dias: dias, rowColor: 'background:rgba(249,115,22,0.07);border-left:3px solid var(--orange)' };
+  return { badge: '<span class="badge badge-green">🟢 Vigente</span>', dias: dias, rowColor: 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)' };
+}
+
+async function loadDocumentos() {
+  const tbody = document.getElementById('tbody-documentos');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
+  try {
+    const { data, error } = await sb.from('documentos').select('*').order('fecha_vencimiento');
+    if (error) throw error;
+    allDocumentos = data || [];
+    renderDocumentos(allDocumentos);
+    updateStatsDoc();
+    populateDocCiudadFilter();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function updateStatsDoc() {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let vigente = 0, proximo = 0, vencido = 0;
+  allDocumentos.forEach(d => {
+    const e = docEstado(d.fecha_vencimiento);
+    if (e === 'vigente') vigente++;
+    else if (e === 'proximo') proximo++;
+    else if (e === 'vencido') vencido++;
+  });
+  document.getElementById('sd-total').textContent   = allDocumentos.length;
+  document.getElementById('sd-vigente').textContent = vigente;
+  document.getElementById('sd-proximo').textContent = proximo;
+  document.getElementById('sd-vencido').textContent = vencido;
+}
+
+function renderDocumentos(list) {
+  const tbody = document.getElementById('tbody-documentos');
+  const vehMap = {};
+  allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin documentos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(d => {
+    const veh = vehMap[d.vehiculo_patente] || {};
+    const { badge, dias, rowColor } = docBadge(d.fecha_vencimiento);
+    const diasStr = dias < 0
+      ? `<span style="color:var(--red)">Hace ${Math.abs(dias)} días</span>`
+      : `${dias} días`;
+    return `<tr style="${rowColor}">
+      <td><strong>${d.vehiculo_patente || '—'}</strong></td>
+      <td>${veh.ciudad || '—'}</td>
+      <td>${d.tipo || '—'}</td>
+      <td>${fmtDate(d.fecha_vencimiento)}</td>
+      <td>${diasStr}</td>
+      <td>${badge}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.observaciones || '—'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="editDocumento(${d.id})">✏️</button>
+        ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteDocumento(${d.id})">✕</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterDocumentos() {
+  const q      = document.getElementById('search-docs').value.toLowerCase();
+  const tipo   = document.getElementById('filter-docs-tipo').value;
+  const estado = document.getElementById('filter-docs-estado').value;
+  const ciudad = document.getElementById('filter-docs-ciudad').value;
+  const vehMap = {}; allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  const list = allDocumentos.filter(d => {
+    const veh = vehMap[d.vehiculo_patente] || {};
+    return (!q      || [d.vehiculo_patente, d.tipo].join(' ').toLowerCase().includes(q)) &&
+           (!tipo   || d.tipo === tipo) &&
+           (!estado || docEstado(d.fecha_vencimiento) === estado) &&
+           (!ciudad || veh.ciudad === ciudad);
+  });
+  renderDocumentos(list);
+}
+
+function populateDocCiudadFilter() {
+  const ciudades = [...new Set(allVehiculos.map(v => v.ciudad).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-docs-ciudad');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todas las ciudades</option>' +
+    ciudades.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = prev;
+}
+
+function openModalDoc() {
+  document.getElementById('modal-doc-title').textContent = 'Nuevo Documento';
+  document.getElementById('doc-id').value = '';
+  document.getElementById('doc-patente').value = '';
+  document.getElementById('doc-tipo').value = '';
+  document.getElementById('doc-fecha').value = '';
+  document.getElementById('doc-obs').value = '';
+  document.getElementById('modal-doc').classList.add('open');
+}
+
+function editDocumento(id) {
+  const d = allDocumentos.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('modal-doc-title').textContent = 'Editar Documento';
+  document.getElementById('doc-id').value      = d.id;
+  document.getElementById('doc-patente').value = d.vehiculo_patente || '';
+  document.getElementById('doc-tipo').value    = d.tipo || '';
+  document.getElementById('doc-fecha').value   = d.fecha_vencimiento || '';
+  document.getElementById('doc-obs').value     = d.observaciones || '';
+  document.getElementById('modal-doc').classList.add('open');
+}
+
+async function saveDocumento() {
+  const id      = document.getElementById('doc-id').value;
+  const patente = document.getElementById('doc-patente').value.trim().toUpperCase();
+  const tipo    = document.getElementById('doc-tipo').value;
+  const fecha   = document.getElementById('doc-fecha').value;
+  if (!patente || !tipo || !fecha) { toast('Completa los campos obligatorios', 'error'); return; }
+  const payload = {
+    vehiculo_patente: patente,
+    tipo,
+    fecha_vencimiento: fecha,
+    observaciones: document.getElementById('doc-obs').value.trim() || null,
+  };
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('documentos').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('documentos').insert(payload));
+    }
+    if (error) throw error;
+    closeModal('modal-doc');
+    toast(id ? 'Documento actualizado' : 'Documento registrado');
+    await loadDocumentos();
+    reaplicarFiltroOperador();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteDocumento(id) {
+  if (!confirm('¿Eliminar este documento?')) return;
+  const { error } = await sb.from('documentos').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Documento eliminado');
+  await loadDocumentos();
 }
 
 // ─── START ─────────────────────────────────────────────────────

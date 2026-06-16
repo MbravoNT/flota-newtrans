@@ -550,6 +550,7 @@
         <option value="">Todas las ciudades</option>
       </select>
       <button class="btn btn-ghost" onclick="loadMantencion().then(reaplicarFiltroOperador)">↺ Actualizar</button>
+      <button class="btn btn-ghost" onclick="exportarMantExcel()">⬇ Exportar Excel</button>
       <button class="btn btn-primary ml-auto" onclick="openModalMant()">+ Nuevo Servicio</button>
     </div>
 
@@ -1811,6 +1812,77 @@ async function deleteDocumento(id) {
   if (error) { toast(error.message, 'error'); return; }
   toast('Documento eliminado');
   await loadDocumentos();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORTAR EXCEL MANTENCIÓN
+// ═══════════════════════════════════════════════════════════════
+async function exportarMantExcel() {
+  // Cargar SheetJS si no está disponible
+  if (!window.XLSX) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  }
+
+  // Obtener la lista actualmente visible (respeta los filtros del usuario)
+  const q       = document.getElementById('search-mant').value.toLowerCase();
+  const tipo    = document.getElementById('filter-mant-tipo').value;
+  const ciudad  = document.getElementById('filter-ciudad-mant').value;
+  const patCiudad = {};
+  allVehiculos.forEach(v => { patCiudad[v.patente] = v; });
+
+  const list = allMantencion.filter(m => {
+    const veh = patCiudad[m.vehiculo_patente] || {};
+    return (!q      || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
+           (!tipo   || m.tipo === tipo) &&
+           (!ciudad || veh.ciudad === ciudad);
+  });
+
+  if (!list.length) { toast('No hay datos para exportar', 'error'); return; }
+
+  // Construir filas
+  const rows = list.map(m => {
+    const veh      = patCiudad[m.vehiculo_patente] || {};
+    const kmActual = parseFloat(veh.odometro) || 0;
+    const kmUltima = parseFloat(m.km_ultima) || 0;
+    const tipo     = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipo === 'camion' || tipo === 'camión' || tipo === 'tracto') ? 20000 : 10000;
+    const kf       = intervalo - (kmActual - kmUltima);
+
+    let estado;
+    if (kf <= 0)        estado = 'Vencido';
+    else if (kf <= 1000) estado = 'Próximo';
+    else                 estado = 'Al día';
+
+    return {
+      'Patente':               m.vehiculo_patente || '',
+      'Ciudad':                veh.ciudad || '',
+      'Tipo Vehículo':         veh.tipo || '',
+      'Tipo Mantención':       m.tipo || '',
+      'Última Fecha':          m.fecha_ultima || '',
+      'KM Última Mantención':  kmUltima,
+      'KM Actual (Odómetro)':  kmActual,
+      'Intervalo KM':          intervalo,
+      'KM Faltante':           kf,
+      'Estado':                estado,
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Ancho de columnas
+  ws['!cols'] = [
+    {wch:12},{wch:14},{wch:14},{wch:20},{wch:14},
+    {wch:20},{wch:20},{wch:12},{wch:12},{wch:10}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Mantención');
+
+  // Nombre de archivo con fecha
+  const hoy = new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  const ciudadLabel = ciudad ? `_${ciudad}` : '_TODAS';
+  XLSX.writeFile(wb, `NTFleet_Mantencion${ciudadLabel}_${hoy}.xlsx`);
+  toast('Excel descargado correctamente');
 }
 
 // ─── START ─────────────────────────────────────────────────────

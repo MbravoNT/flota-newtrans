@@ -1316,17 +1316,31 @@ function renderMantencion(list) {
 }
 
 function filterMantencion() {
-  const q    = document.getElementById('search-mant').value.toLowerCase();
-  const tipo = document.getElementById('filter-mant-tipo').value;
+  const q          = document.getElementById('search-mant').value.toLowerCase();
+  const tipoServ   = document.getElementById('filter-mant-tipo').value;
   const ciudadMant = document.getElementById('filter-ciudad-mant').value;
-  // Construir mapa patente->ciudad desde allVehiculos
-  const patCiudad = {};
-  allVehiculos.forEach(v => { patCiudad[v.patente] = v.ciudad; });
-  const list = allMantencion.filter(m =>
-    (!q          || [m.vehiculo_patente, m.tipo, patCiudad[m.vehiculo_patente]].join(' ').toLowerCase().includes(q)) &&
-    (!tipo       || m.tipo === tipo) &&
-    (!ciudadMant || patCiudad[m.vehiculo_patente] === ciudadMant)
-  );
+  const estadoMant = document.getElementById('filter-mant-estado') ? document.getElementById('filter-mant-estado').value : '';
+
+  const vehMap = {};
+  allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  const list = allMantencion.filter(m => {
+    const veh = vehMap[m.vehiculo_patente] || {};
+    const kmActual  = parseFloat(veh.odometro) || 0;
+    const kmUltima  = parseFloat(m.km_ultima) || 0;
+    const tipoVeh   = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipoVeh === 'camion' || tipoVeh === 'camión' || tipoVeh === 'tracto') ? 20000 : 10000;
+    const kf        = intervalo - (kmActual - kmUltima);
+    let estadoCalc;
+    if (kf <= 0)         estadoCalc = 'vencido';
+    else if (kf <= 1000) estadoCalc = 'proximo';
+    else                 estadoCalc = 'aldia';
+
+    return (!q          || [m.vehiculo_patente, m.tipo, veh.ciudad].join(' ').toLowerCase().includes(q)) &&
+           (!tipoServ   || m.tipo === tipoServ) &&
+           (!ciudadMant || veh.ciudad === ciudadMant) &&
+           (!estadoMant || estadoCalc === estadoMant);
+  });
   renderMantencion(list);
 }
 

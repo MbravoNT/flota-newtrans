@@ -1110,7 +1110,7 @@ async function loadVehiculos() {
     const { data, error } = await sb
       .from('vehiculos')
       .select('*')
-      .order('patente');
+      .order('patente', { ascending: true });
     if (error) throw error;
     allVehiculos = data || [];
     renderVehiculos(allVehiculos);
@@ -1249,7 +1249,7 @@ async function loadMantencion() {
     const { data, error } = await sb
       .from('mantenciones')
       .select('*')
-      .order('fecha_ultima', { ascending: false });
+      .order('vehiculo_patente', { ascending: true });
     if (error) throw error;
     allMantencion = data || [];
     renderMantencion(allMantencion);
@@ -1679,7 +1679,7 @@ async function loadDocumentos() {
   const tbody = document.getElementById('tbody-documentos');
   tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
   try {
-    const { data, error } = await sb.from('documentos').select('*').order('fecha_vencimiento');
+    const { data, error } = await sb.from('documentos').select('*').order('vehiculo_patente', { ascending: true });
     if (error) throw error;
     allDocumentos = data || [];
     renderDocumentos(allDocumentos);

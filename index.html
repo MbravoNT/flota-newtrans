@@ -1,1204 +1,1912 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SGC Newtrans — Sistema de Gestión de Calidad</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-:root {
-  --azul:        #1A3A5C;
-  --azul-med:    #2563A8;
-  --azul-claro:  #EBF2FB;
-  --azul-borde:  #BFCFE6;
-  --verde:       #1E6B45;
-  --verde-claro: #E8F5EE;
-  --verde-borde: #A3CFBA;
-  --ambar:       #7A4A00;
-  --ambar-claro: #FEF3DC;
-  --ambar-borde: #F0C97A;
-  --rojo:        #8B1F1F;
-  --rojo-claro:  #FDEAEA;
-  --rojo-borde:  #E8AAAA;
-  --morado:      #3B3BAA;
-  --morado-claro:#EEF0FE;
-  --morado-borde:#B0B0E8;
-  --gris-900:    #1C1F26;
-  --gris-700:    #3D4350;
-  --gris-500:    #6B7280;
-  --gris-300:    #CBD0D8;
-  --gris-100:    #F4F5F7;
-  --gris-50:     #F9FAFB;
-  --blanco:      #FFFFFF;
-  --fuente: 'Segoe UI', system-ui, sans-serif;
-  --radio-sm: 6px; --radio-md: 10px; --radio-lg: 14px;
-  --sombra: 0 1px 4px rgba(0,0,0,0.08);
-  --sidebar-w: 256px;
-  --topbar-h: 56px;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--fuente);background:var(--gris-50);color:var(--gris-900);font-size:14px;line-height:1.5}
-button{cursor:pointer;font-family:inherit}
-input,select,textarea{font-family:inherit;font-size:14px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newtrans · Gestión de Flota</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --surface: #111520;
+      --surface2: #171d2e;
+      --border: #1e2840;
+      --accent: #e8aa30;
+      --accent2: #f0c060;
+      --blue: #3b82f6;
+      --green: #22c55e;
+      --red: #ef4444;
+      --orange: #f97316;
+      --text: #e8ecf4;
+      --muted: #6b7a9a;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
 
-/* LOGIN */
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--azul)}
-.login-card{background:var(--blanco);border-radius:var(--radio-lg);padding:40px 36px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
-.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
-.login-logo-icon{width:44px;height:44px;background:var(--azul);border-radius:var(--radio-md);display:flex;align-items:center;justify-content:center}
-.login-logo-icon svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:1.8}
-.login-logo-text{font-size:17px;font-weight:700;color:var(--azul)}
-.login-logo-sub{font-size:11px;color:var(--gris-500)}
-.login-title{font-size:15px;font-weight:600;color:var(--gris-900);margin-bottom:4px}
-.login-desc{font-size:13px;color:var(--gris-500);margin-bottom:24px}
-.fg{margin-bottom:16px}
-.fg label{display:block;font-size:11px;font-weight:700;color:var(--gris-700);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
-.fg input{width:100%;padding:9px 12px;border:1px solid var(--gris-300);border-radius:var(--radio-sm);font-size:14px;color:var(--gris-900)}
-.fg input:focus{outline:none;border-color:var(--azul-med);box-shadow:0 0 0 3px rgba(37,99,168,.12)}
-.btn-login{width:100%;padding:10px;background:var(--azul);color:#fff;border:none;border-radius:var(--radio-sm);font-size:14px;font-weight:600;transition:background .15s;margin-top:4px}
-.btn-login:hover{background:var(--azul-med)}
-.login-error{font-size:12px;color:var(--rojo);margin-top:10px;text-align:center;display:none}
-.cert-strip{display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--gris-100)}
-.cert-badge{flex:1;text-align:center;background:var(--gris-50);border:1px solid var(--gris-300);border-radius:var(--radio-sm);padding:6px;font-size:10px;font-weight:700;color:var(--gris-700)}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* TOPBAR */
-#topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--azul);z-index:100;display:flex;align-items:center;padding:0 20px;gap:16px;border-bottom:1px solid rgba(255,255,255,.1)}
-.topbar-logo{display:flex;align-items:center;gap:10px;min-width:calc(var(--sidebar-w) - 20px)}
-.topbar-logo-icon{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center}
-.topbar-logo-icon svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2}
-.topbar-logo-text{color:#fff;font-size:15px;font-weight:700;line-height:1.2}
-.topbar-logo-sub{color:rgba(255,255,255,.5);font-size:10px}
-.topbar-search-wrap{flex:1;max-width:380px;position:relative}
-.topbar-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:var(--radio-sm);padding:7px 12px}
-.topbar-search svg{width:14px;height:14px;stroke:rgba(255,255,255,.6);fill:none;flex-shrink:0}
-.topbar-search input{background:transparent;border:none;outline:none;color:#fff;font-size:13px;width:100%}
-.topbar-search input::placeholder{color:rgba(255,255,255,.4)}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
-.cert-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85)}
-.cert-pill svg{width:12px;height:12px;stroke:currentColor;fill:none}
-.user-menu{display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px 4px 4px}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
-.user-name{font-size:12px;color:rgba(255,255,255,.9);font-weight:500}
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      min-height: 100vh;
+    }
 
-/* LAYOUT */
-#app{display:none}
-#sidebar{position:fixed;left:0;top:var(--topbar-h);bottom:0;width:var(--sidebar-w);background:var(--blanco);border-right:1px solid var(--gris-300);overflow-y:auto;z-index:50;padding:12px 0}
-#main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:24px;min-height:calc(100vh - var(--topbar-h))}
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo span { color: var(--text); }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    #status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      box-shadow: 0 0 0 3px rgba(107,122,154,0.2);
+      transition: all .3s;
+    }
+    #status-dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+    }
+    #status-label { color: var(--muted); font-size: 12px; }
 
-/* SIDEBAR */
-.nav-label{font-size:10px;font-weight:700;color:var(--gris-500);letter-spacing:.1em;text-transform:uppercase;padding:10px 14px 4px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:13px;color:var(--gris-700);cursor:pointer;border-left:2px solid transparent;transition:background .1s,color .1s;user-select:none}
-.nav-item:hover{background:var(--gris-50);color:var(--gris-900)}
-.nav-item.active{background:var(--azul-claro);color:var(--azul);border-left-color:var(--azul-med);font-weight:600}
-.nav-item .ico{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;font-weight:800}
-.nav-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
-.nav-pill{margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;line-height:1.6}
-.np-rojo{background:var(--rojo-claro);color:var(--rojo)}
-.np-azul{background:var(--azul-claro);color:var(--azul)}
-.np-verde{background:var(--verde-claro);color:var(--verde)}
-.nav-divider{height:1px;background:var(--gris-100);margin:8px 0}
+    /* ── NAV ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      gap: 4px;
+    }
+    .nav-btn {
+      padding: 12px 18px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+    .nav-btn:hover { color: var(--text); }
+    .nav-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
 
-/* PÁGINAS */
-.page{display:none}
-.page.active{display:block}
-.ph{margin-bottom:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
-.ph-text h1{font-size:20px;font-weight:700;color:var(--azul);margin-bottom:3px}
-.ph-text p{font-size:13px;color:var(--gris-500)}
+    /* ── LAYOUT ── */
+    main {
+      padding: 28px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
 
-/* CARDS */
-.card{background:var(--blanco);border:1px solid var(--gris-300);border-radius:var(--radio-md);padding:18px}
-.card-title{font-size:13px;font-weight:700;color:var(--gris-900);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.card-title svg{width:15px;height:15px;stroke:var(--gris-500);fill:none;stroke-width:1.8}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    /* ── TABS ── */
+    .tab { display: none; }
+    .tab.active { display: block; }
 
-/* KPI */
-.kpi{background:var(--blanco);border:1px solid var(--gris-300);border-radius:var(--radio-md);padding:14px 16px}
-.kpi-ico{width:34px;height:34px;border-radius:var(--radio-sm);display:flex;align-items:center;justify-content:center;margin-bottom:10px}
-.kpi-ico svg{width:17px;height:17px;fill:none;stroke-width:1.8}
-.kpi-val{font-size:26px;font-weight:800;line-height:1;margin-bottom:3px}
-.kpi-lbl{font-size:11px;color:var(--gris-500)}
-.kpi-sub{font-size:11px;margin-top:4px}
+    /* ── STATS ROW ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.6;
+    }
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-/* TABLA */
-.tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead th{text-align:left;font-size:10px;font-weight:700;color:var(--gris-500);letter-spacing:.06em;text-transform:uppercase;padding:9px 12px;background:var(--gris-50);border-bottom:1px solid var(--gris-300)}
-tbody td{padding:10px 12px;border-bottom:1px solid var(--gris-100);color:var(--gris-700);vertical-align:middle}
-tbody tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:var(--gris-50)}
-.code{font-family:'Courier New',monospace;font-size:11px;font-weight:700;background:var(--gris-100);color:var(--azul);padding:2px 6px;border-radius:4px;border:1px solid var(--azul-borde);white-space:nowrap}
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      width: 260px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+    select.filter-sel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+    .btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0d14;
+    }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    .btn-danger:hover { background: var(--red); color: #fff; }
+    .btn-sm {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    .btn-sm:hover { color: var(--text); border-color: var(--muted); }
+    .ml-auto { margin-left: auto; }
 
-/* BADGE */
-.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;white-space:nowrap}
-.b-ok{background:var(--verde-claro);color:var(--verde);border:1px solid var(--verde-borde)}
-.b-rev{background:var(--ambar-claro);color:var(--ambar);border:1px solid var(--ambar-borde)}
-.b-obs{background:var(--gris-100);color:var(--gris-500);border:1px solid var(--gris-300)}
-.b-rojo{background:var(--rojo-claro);color:var(--rojo);border:1px solid var(--rojo-borde)}
-.b-azul{background:var(--azul-claro);color:var(--azul);border:1px solid var(--azul-borde)}
-.b-morado{background:var(--morado-claro);color:var(--morado);border:1px solid var(--morado-borde)}
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--surface2);
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    td {
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state svg { opacity: 0.3; margin-bottom: 12px; }
 
-/* BOTONES */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radio-sm);font-size:13px;font-weight:600;border:none;transition:background .15s;cursor:pointer}
-.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
-.btn-p{background:var(--azul);color:#fff}.btn-p:hover{background:var(--azul-med)}
-.btn-s{background:var(--blanco);color:var(--gris-700);border:1px solid var(--gris-300)}.btn-s:hover{background:var(--gris-50)}
-.btn-sm{padding:5px 10px;font-size:12px}
-.btn-r{background:var(--rojo-claro);color:var(--rojo);border:1px solid var(--rojo-borde)}
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-green  { background: rgba(34,197,94,.15);  color: var(--green); }
+    .badge-red    { background: rgba(239,68,68,.15);  color: var(--red); }
+    .badge-orange { background: rgba(249,115,22,.15); color: var(--orange); }
+    .badge-blue   { background: rgba(59,130,246,.15); color: var(--blue); }
+    .badge-muted  { background: rgba(107,122,154,.15);color: var(--muted); }
 
-/* CARPETA CARDS */
-.folder-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.folder-card{background:var(--blanco);border:1px solid var(--gris-300);border-radius:var(--radio-md);padding:14px 16px;cursor:pointer;transition:box-shadow .15s,border-color .15s;display:flex;align-items:flex-start;gap:12px}
-.folder-card:hover{box-shadow:var(--sombra);border-color:var(--azul-borde)}
-.folder-icon{width:38px;height:38px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
-.folder-name{font-size:13px;font-weight:700;color:var(--gris-900);line-height:1.3}
-.folder-meta{font-size:11px;color:var(--gris-500);margin-top:3px}
-.folder-clausula{font-size:10px;font-weight:700;margin-top:5px}
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 520px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h3 {
+      font-family: var(--font-head);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--accent);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
 
-/* NC */
-.nc-item{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid var(--gris-100)}
-.nc-item:last-child{border-bottom:none}
-.nc-bar{width:5px;border-radius:3px;align-self:stretch;min-height:38px;flex-shrink:0}
-.nb-alta{background:var(--rojo)}.nb-media{background:#EF9F27}.nb-baja{background:var(--verde)}
-.nc-body{flex:1}
-.nc-title{font-size:13px;font-weight:600;color:var(--gris-900);margin-bottom:3px}
-.nc-meta{font-size:11px;color:var(--gris-500);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all .3s;
+      z-index: 300;
+      max-width: 320px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { border-color: var(--green); color: var(--green); }
+    #toast.error   { border-color: var(--red);   color: var(--red); }
 
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.modal{background:var(--blanco);border-radius:var(--radio-lg);width:540px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
-.mh{padding:18px 22px 14px;border-bottom:1px solid var(--gris-100);display:flex;align-items:center;justify-content:space-between}
-.mh h2{font-size:15px;font-weight:700;color:var(--azul)}
-.mclose{background:none;border:none;padding:4px;cursor:pointer;border-radius:6px;color:var(--gris-500)}
-.mclose:hover{background:var(--gris-100)}
-.mclose svg{width:17px;height:17px;stroke:currentColor;fill:none;display:block}
-.mb{padding:18px 22px}
-.mf{padding:14px 22px;border-top:1px solid var(--gris-100);display:flex;justify-content:flex-end;gap:8px}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:11px;font-weight:700;color:var(--gris-700);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-.field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--gris-300);border-radius:var(--radio-sm);font-size:13px;color:var(--gris-900);background:var(--blanco)}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--azul-med);box-shadow:0 0 0 3px rgba(37,99,168,.1)}
-.field textarea{min-height:70px;resize:vertical}
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    /* ── LOADING ── */
+    .loader {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-/* UPLOAD */
-.upload-zone{border:2px dashed var(--gris-300);border-radius:var(--radio-md);padding:22px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
-.upload-zone:hover{border-color:var(--azul-med);background:var(--azul-claro)}
-.upload-zone svg{width:30px;height:30px;stroke:var(--gris-300);fill:none;display:block;margin:0 auto 8px}
-.upload-zone p{font-size:13px;color:var(--gris-500)}
-.upload-zone strong{color:var(--azul-med)}
+    /* ── PAGE TITLE ── */
+    .page-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-title .sub {
+      font-size: 13px;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-weight: 400;
+    }
 
-/* SEARCH DROPDOWN */
-#search-results{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--blanco);border:1px solid var(--gris-300);border-radius:var(--radio-md);box-shadow:var(--sombra);z-index:200;max-height:300px;overflow-y:auto}
-.sr-item{padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--gris-100)}
-.sr-item:hover{background:var(--gris-50)}
-.sr-item:last-child{border-bottom:none}
-.sr-name{font-size:13px;font-weight:600;color:var(--gris-900)}
-.sr-meta{font-size:11px;color:var(--gris-500)}
-
-/* TOAST */
-#toast{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--gris-900);color:#fff;padding:11px 18px;border-radius:var(--radio-md);font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
-#toast.show{opacity:1;transform:translateY(0)}
-
-/* KPI BAR */
-.kbar-track{height:5px;background:var(--gris-100);border-radius:3px;overflow:hidden;margin-top:8px}
-.kbar-fill{height:100%;border-radius:3px;transition:width .6s ease}
-
-/* AUDIT ROW */
-.arow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gris-100)}
-.arow:last-child{border-bottom:none}
-.an{font-size:13px;font-weight:600;color:var(--gris-900)}
-.as{font-size:11px;color:var(--gris-500);margin-top:2px}
-
-/* EMPTY */
-.empty{text-align:center;padding:40px 20px;color:var(--gris-500)}
-.empty svg{width:44px;height:44px;stroke:var(--gris-300);fill:none;display:block;margin:0 auto 10px}
-
-/* VISTA CARPETA (detalle) */
-.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--azul-med);cursor:pointer;margin-bottom:16px;background:none;border:none;font-weight:500}
-.back-btn svg{width:14px;height:14px;stroke:currentColor;fill:none}
-.back-btn:hover{text-decoration:underline}
-
-/* CERT BANNER */
-.cert-banner{display:flex;gap:10px;margin-bottom:20px}
-.cert-card{flex:1;background:var(--blanco);border:1px solid var(--gris-300);border-radius:var(--radio-md);padding:12px 16px;display:flex;align-items:center;gap:12px}
-.cert-card-ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;font-weight:800}
-.cert-card-name{font-size:13px;font-weight:700;color:var(--gris-900)}
-.cert-card-det{font-size:11px;color:var(--gris-500)}
-</style>
+    /* ── SECTION ── */
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .count-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="login-logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-      </div>
-      <div>
-        <div class="login-logo-text">SGC Newtrans</div>
-        <div class="login-logo-sub">Sistema de Gestión de Calidad</div>
-      </div>
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;">
+  <div style="width:380px;max-width:95vw;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-family:var(--font-head);font-size:36px;font-weight:800;color:var(--accent)">NT<span style="color:var(--text)">Fleet</span></div>
+      <div style="color:var(--muted);font-size:13px;margin-top:6px;">Newtrans Logistic Chile</div>
     </div>
-    <div class="login-title">Ingresar al portal</div>
-    <div class="login-desc">Acceso restringido al personal autorizado de Newtrans Logistic.</div>
-    <div class="fg"><label>Correo electrónico</label><input type="email" id="le" placeholder="usuario@newtrans.cl" /></div>
-    <div class="fg"><label>Contraseña</label><input type="password" id="lp" placeholder="••••••••" /></div>
-    <button class="btn-login" onclick="doLogin()">Ingresar</button>
-    <div class="login-error" id="lerr">Credenciales incorrectas.</div>
-    <div class="cert-strip">
-      <div class="cert-badge">✓ ISO 9001:2015</div>
-      <div class="cert-badge">✓ NT 147 BPD</div>
-      <div class="cert-badge">✓ NT 208</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;">
+      <div style="font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:20px;">Iniciar Sesión</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Correo</label>
+        <input type="email" id="login-email" placeholder="usuario@newtrans.cl" />
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doLogin()" id="login-btn">Ingresar</button>
+      <div id="login-error" style="color:var(--red);font-size:12px;margin-top:12px;text-align:center;display:none;"></div>
     </div>
   </div>
 </div>
 
-<!-- APP -->
-<div id="app">
-  <!-- TOPBAR -->
-  <div id="topbar">
-    <div class="topbar-logo">
-      <div class="topbar-logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-      </div>
-      <div><div class="topbar-logo-text">SGC Newtrans</div><div class="topbar-logo-sub">ISO 9001:2015 · NT 147 · NT 208</div></div>
-    </div>
-    <div class="topbar-search-wrap">
-      <div class="topbar-search">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="si" placeholder="Buscar documentos…" oninput="doSearch(this.value)" />
-      </div>
-      <div id="search-results"></div>
-    </div>
-    <div class="topbar-right">
-      <div class="cert-pill"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>ISO 9001:2015</div>
-      <div class="cert-pill"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>NT 147</div>
-      <div class="user-menu" onclick="doLogout()">
-        <div class="user-avatar" id="uinit">--</div>
-        <div class="user-name" id="uname">—</div>
-        <span id="rol-badge" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid rgba(255,255,255,0.2)">—</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- SIDEBAR -->
-  <div id="sidebar">
-    <div class="nav-label">Principal</div>
-    <div class="nav-item active" data-p="inicio" onclick="go('inicio')">
-      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Inicio
-    </div>
-    <div class="nav-item" data-p="carpetas" onclick="go('carpetas')">
-      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Repositorio de documentos
-    </div>
-    <div class="nav-item" data-p="todos" onclick="go('todos')">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Todos los documentos
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-label">ISO 9001 · NT 147</div>
-    <div class="nav-item" data-p="hallazgos" onclick="go('hallazgos')">
-      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Hallazgos / NC <span class="nav-pill np-rojo" id="nc-badge">0</span>
-    </div>
-    <div class="nav-item" data-p="reclamos" onclick="go('reclamos')">
-      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      Reclamos <span class="nav-pill np-rojo" id="rec-badge">0</span>
-    </div>
-    <div class="nav-item" data-p="auditoria" onclick="go('auditoria')">
-      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-      Auditorías <span class="nav-pill np-azul">4</span>
-    </div>
-    <div class="nav-item" data-p="revision" onclick="go('revision')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Revisión por la dirección
-    </div>
-    <div class="nav-item" data-p="indicadores" onclick="go('indicadores')">
-      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Indicadores KPI
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-label">Módulos operacionales</div>
-    <div class="nav-item" data-p="temp" onclick="go('temp')">
-      <svg viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>Control de temperatura
-    </div>
-    <div class="nav-item" data-p="flota" onclick="go('flota')">
-      <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Calificación de flota
-    </div>
-    <div class="nav-item" data-p="proveedores" onclick="go('proveedores')">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Proveedores
-    </div>
-    <div class="nav-item" data-p="mantencion" onclick="go('mantencion')">
-      <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Mantención
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-label">Administración</div>
-    <div class="nav-item" data-p="subir" onclick="go('subir')">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Subir documento
-    </div>
-  </div>
-
-  <!-- MAIN -->
-  <div id="main">
-
-    <!-- INICIO -->
-    <div class="page active" id="page-inicio">
-      <div class="ph"><div class="ph-text"><h1>Portal SGC — Newtrans Logistic</h1><p id="wmsg">Sistema de Gestión de Calidad certificado ISO 9001:2015 · NT 147 · NT 208</p></div></div>
-      <div class="cert-banner">
-        <div class="cert-card">
-          <div class="cert-card-ico" style="background:#EBF2FB;color:#1A3A5C">ISO</div>
-          <div><div class="cert-card-name">ISO 9001:2015</div><div class="cert-card-det">Certificado vigente · Sistema de Gestión de Calidad</div></div>
-          <span class="badge b-ok" style="margin-left:auto">Vigente</span>
-        </div>
-        <div class="cert-card">
-          <div class="cert-card-ico" style="background:#E8F5EE;color:#1E6B45">NT</div>
-          <div><div class="cert-card-name">NT 147 — Buenas Prácticas de Distribución</div><div class="cert-card-det">Distribución farmacéutica · Certificado 2026</div></div>
-          <span class="badge b-ok" style="margin-left:auto">Vigente</span>
-        </div>
-        <div class="cert-card">
-          <div class="cert-card-ico" style="background:#FEF3DC;color:#7A4A00">NT</div>
-          <div><div class="cert-card-name">NT 208</div><div class="cert-card-det">Certificado de cumplimiento · 2025</div></div>
-          <span class="badge b-ok" style="margin-left:auto">Vigente</span>
-        </div>
-      </div>
-      <div class="g4" style="margin-bottom:18px">
-        <div class="kpi">
-          <div class="kpi-ico" style="background:var(--azul-claro)"><svg viewBox="0 0 24 24" style="stroke:var(--azul)"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-          <div class="kpi-val" style="color:var(--azul)" id="k-docs">—</div>
-          <div class="kpi-lbl">Documentos vigentes</div>
-          <div class="kpi-sub" style="color:var(--verde)">En el SGC</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-ico" style="background:var(--ambar-claro)"><svg viewBox="0 0 24 24" style="stroke:var(--ambar)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-          <div class="kpi-val" style="color:var(--ambar)" id="k-rev">—</div>
-          <div class="kpi-lbl">En revisión</div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Requieren aprobación</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-ico" style="background:var(--rojo-claro)"><svg viewBox="0 0 24 24" style="stroke:var(--rojo)"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
-          <div class="kpi-val" style="color:var(--rojo)" id="k-nc">—</div>
-          <div class="kpi-lbl">Hallazgos abiertos</div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Requieren acción</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-ico" style="background:var(--verde-claro)"><svg viewBox="0 0 24 24" style="stroke:var(--verde)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div class="kpi-val" style="color:var(--verde);font-size:16px;padding-top:4px">15 Jul</div>
-          <div class="kpi-lbl">Próxima auditoría</div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Auditoría interna</div>
-        </div>
-      </div>
-      <div class="g2" style="margin-bottom:16px">
-        <div class="card">
-          <div class="card-title"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Hallazgos y NC recientes</div>
-          <div id="nc-home"></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Documentos recientes</div>
-          <div id="docs-home"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/></svg>Programa de auditorías 2026</div>
-        <div class="arow"><div><div class="an">Auditoría interna — Operaciones</div><div class="as">Cl. 8 y 9 · Auditor: Marco Bravo · NT 147</div></div><span class="badge b-rev">15 Jul 2026</span></div>
-        <div class="arow"><div><div class="an">Revisión por la dirección</div><div class="as">SGC completo — cláusulas 4–10</div></div><span class="badge b-ok">01 Ago 2026</span></div>
-        <div class="arow"><div><div class="an">Auditoría externa ISP / CENABAST</div><div class="as">NT 147 Buenas Prácticas de Distribución</div></div><span class="badge b-obs">Sep 2026</span></div>
-        <div class="arow"><div><div class="an">Auditoría cadena de frío</div><div class="as">Calificación vehículos refrigerados · Cl. 8.5</div></div><span class="badge b-obs">Nov 2026</span></div>
-      </div>
-    </div>
-
-    <!-- CARPETAS -->
-    <div class="page" id="page-carpetas">
-      <div class="ph"><div class="ph-text"><h1>Repositorio de documentos</h1><p>Organizado según la estructura documental de Newtrans.</p></div>
-        <button class="btn btn-p" onclick="go('subir')"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Subir documento</button>
-      </div>
-      <div class="folder-grid" id="folder-grid"></div>
-    </div>
-
-    <!-- DETALLE CARPETA -->
-    <div class="page" id="page-carpeta-detalle">
-      <button class="back-btn" onclick="go('carpetas')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>Volver al repositorio</button>
-      <div class="ph"><div class="ph-text"><h1 id="detalle-titulo">—</h1><p id="detalle-desc">—</p></div>
-        <button class="btn btn-p" onclick="go('subir')"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Subir aquí</button>
-      </div>
-      <div class="card">
-        <div class="tw"><table>
-          <thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Versión</th><th>Responsable</th><th>Estado</th><th>Acciones</th></tr></thead>
-          <tbody id="detalle-tbody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- TODOS LOS DOCS -->
-    <div class="page" id="page-todos">
-      <div class="ph">
-        <div class="ph-text"><h1>Todos los documentos</h1><p>Repositorio completo del SGC con control de versiones.</p></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="f-carpeta" onchange="filtrarTodos()" style="padding:7px 10px;border:1px solid var(--gris-300);border-radius:var(--radio-sm);font-size:13px">
-            <option value="">Todas las carpetas</option>
-          </select>
-          <select id="f-estado" onchange="filtrarTodos()" style="padding:7px 10px;border:1px solid var(--gris-300);border-radius:var(--radio-sm);font-size:13px">
-            <option value="">Todos los estados</option>
-            <option>Vigente</option><option>En revisión</option><option>Obsoleto</option>
-          </select>
-          <button class="btn btn-p" onclick="go('subir')"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo</button>
-        </div>
-      </div>
-      <div class="card"><div class="tw"><table>
-        <thead><tr><th>Código</th><th>Nombre</th><th>Carpeta</th><th>Tipo</th><th>Responsable</th><th>Versión</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="todos-tbody"></tbody>
-      </table></div></div>
-    </div>
-
-    <!-- HALLAZGOS -->
-    <div class="page" id="page-hallazgos">
-      <div class="ph">
-        <div class="ph-text"><h1>Hallazgos y no conformidades</h1><p>Registro y seguimiento según cl. 10 ISO 9001:2015.</p></div>
-        <button class="btn btn-p" onclick="abrirNC()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar hallazgo</button>
-      </div>
-      <div class="card"><div id="nc-lista"></div></div>
-    </div>
-
-    <!-- RECLAMOS -->
-    <div class="page" id="page-reclamos">
-      <div class="ph">
-        <div class="ph-text"><h1>Reclamos de clientes</h1><p>Gestión y seguimiento de reclamos — cl. 8.2.1 y 10.2.</p></div>
-        <button class="btn btn-p" onclick="abrirReclamo()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar reclamo</button>
-      </div>
-      <div class="card"><div id="rec-lista"></div></div>
-    </div>
-
-    <!-- AUDITORIA -->
-    <div class="page" id="page-auditoria">
-      <div class="ph"><div class="ph-text"><h1>Auditorías</h1><p>Programa de auditorías internas y externas 2026.</p></div></div>
-      <div class="card">
-        <div class="card-title"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Programa 2026</div>
-        <div class="arow"><div><div class="an">Auditoría interna — Operaciones y distribución</div><div class="as">Cláusulas 8 y 9 · Auditor: Marco Bravo · Alcance: distribución farmacéutica y flota</div></div><span class="badge b-rev">15 Jul 2026</span></div>
-        <div class="arow"><div><div class="an">Revisión por la dirección</div><div class="as">SGC completo cláusulas 4–10 · Gerencia + Gestores + Ing. Procesos</div></div><span class="badge b-ok">01 Ago 2026</span></div>
-        <div class="arow"><div><div class="an">Auditoría externa ISP / CENABAST — NT 147</div><div class="as">Buenas Prácticas de Distribución · Organismo certificador externo</div></div><span class="badge b-obs">Sep 2026</span></div>
-        <div class="arow"><div><div class="an">Auditoría calificación cadena de frío</div><div class="as">Vehículos refrigerados · Cl. 8.5 · Certificado de calibración</div></div><span class="badge b-obs">Nov 2026</span></div>
-        <div class="arow"><div><div class="an">Auditoría NT 208</div><div class="as">Cumplimiento regulatorio · Seguimiento certificado 2025</div></div><span class="badge b-obs">Dic 2026</span></div>
-      </div>
-    </div>
-
-    <!-- REVISION DIRECCION -->
-    <div class="page" id="page-revision">
-      <div class="ph"><div class="ph-text"><h1>Revisión por la dirección</h1><p>Cl. 9.3 ISO 9001:2015 — seguimiento de resultados y decisiones.</p></div></div>
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title">Entradas de la revisión (cl. 9.3.2)</div>
-        <div class="arow"><div><div class="an">Estado de acciones de revisiones anteriores</div><div class="as">Seguimiento compromisos Revisión Dic 2025</div></div><span class="badge b-ok">Completado</span></div>
-        <div class="arow"><div><div class="an">Cambios en cuestiones externas e internas</div><div class="as">Análisis FODA actualizado Jun 2026</div></div><span class="badge b-rev">En proceso</span></div>
-        <div class="arow"><div><div class="an">Información sobre el desempeño y la eficacia del SGC</div><div class="as">KPI calidad, NC, reclamos, auditorías</div></div><span class="badge b-ok">Disponible</span></div>
-        <div class="arow"><div><div class="an">Suficiencia de los recursos</div><div class="as">RRHH, infraestructura, flota</div></div><span class="badge b-rev">Por revisar</span></div>
-        <div class="arow"><div><div class="an">Oportunidades de mejora</div><div class="as">Consolidado de hallazgos y sugerencias</div></div><span class="badge b-rev">Por revisar</span></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Próxima revisión: 01 Agosto 2026</div>
-        <p style="font-size:13px;color:var(--gris-500);margin-bottom:12px">Participantes: Gerencia General, Ing. de Procesos y Calidad, Gestores regionales.</p>
-        <button class="btn btn-p">Descargar acta anterior</button>
-      </div>
-    </div>
-
-    <!-- INDICADORES -->
-    <div class="page" id="page-indicadores">
-      <div class="ph"><div class="ph-text"><h1>Indicadores de calidad</h1><p>KPI del SGC — período junio 2026.</p></div></div>
-      <div class="g3" style="margin-bottom:16px">
-        <div class="kpi" style="padding:18px">
-          <div class="kpi-lbl" style="margin-bottom:6px">Entregas conformes</div>
-          <div class="kpi-val" style="color:var(--verde)">98.4<span style="font-size:16px">%</span></div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Meta ≥ 97% · <strong style="color:var(--verde)">Cumple</strong></div>
-          <div class="kbar-track"><div class="kbar-fill" style="width:98.4%;background:var(--verde)"></div></div>
-        </div>
-        <div class="kpi" style="padding:18px">
-          <div class="kpi-lbl" style="margin-bottom:6px">NC cerradas en plazo</div>
-          <div class="kpi-val" style="color:var(--ambar)">72<span style="font-size:16px">%</span></div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Meta ≥ 85% · <strong style="color:var(--ambar)">Bajo meta</strong></div>
-          <div class="kbar-track"><div class="kbar-fill" style="width:72%;background:#EF9F27"></div></div>
-        </div>
-        <div class="kpi" style="padding:18px">
-          <div class="kpi-lbl" style="margin-bottom:6px">Temperatura cadena frío OK</div>
-          <div class="kpi-val" style="color:var(--verde)">99.1<span style="font-size:16px">%</span></div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Meta ≥ 99% · <strong style="color:var(--verde)">Cumple</strong></div>
-          <div class="kbar-track"><div class="kbar-fill" style="width:99.1%;background:var(--verde)"></div></div>
-        </div>
-        <div class="kpi" style="padding:18px">
-          <div class="kpi-lbl" style="margin-bottom:6px">Capacitaciones al día</div>
-          <div class="kpi-val" style="color:var(--verde)">91<span style="font-size:16px">%</span></div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Meta ≥ 80% · <strong style="color:var(--verde)">Cumple</strong></div>
-          <div class="kbar-track"><div class="kbar-fill" style="width:91%;background:var(--verde)"></div></div>
-        </div>
-        <div class="kpi" style="padding:18px">
-          <div class="kpi-lbl" style="margin-bottom:6px">Reclamos clientes</div>
-          <div class="kpi-val" style="color:var(--rojo)">7</div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Meta ≤ 5 · <strong style="color:var(--rojo)">Fuera de meta</strong></div>
-          <div class="kbar-track"><div class="kbar-fill" style="width:58%;background:var(--rojo)"></div></div>
-        </div>
-        <div class="kpi" style="padding:18px">
-          <div class="kpi-lbl" style="margin-bottom:6px">Mantenciones preventivas OK</div>
-          <div class="kpi-val" style="color:var(--ambar)" id="k-mant">—</div>
-          <div class="kpi-sub" style="color:var(--gris-500)">Meta ≥ 90% flota al día</div>
-          <div class="kbar-track"><div class="kbar-fill" id="k-mant-bar" style="width:0%;background:var(--ambar)"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TEMPERATURA -->
-    <div class="page" id="page-temp">
-      <div class="ph"><div class="ph-text"><h1>Control de temperatura</h1><p>Monitoreo cadena de frío — NT 147 · Cl. 8.5.</p></div></div>
-      <div class="g2" style="margin-bottom:14px">
-        <div class="kpi" style="padding:18px"><div class="kpi-lbl" style="margin-bottom:6px">Registros conformes (Jun)</div><div class="kpi-val" style="color:var(--verde)">99.1<span style="font-size:16px">%</span></div><div class="kpi-sub" style="color:var(--gris-500)">Meta NT 147: 100% en rango 2–8°C</div></div>
-        <div class="kpi" style="padding:18px"><div class="kpi-lbl" style="margin-bottom:6px">Alertas de temperatura</div><div class="kpi-val" style="color:var(--rojo)">3</div><div class="kpi-sub" style="color:var(--gris-500)">Este mes · Requieren investigación</div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Registros de temperatura — flota refrigerada</div>
-        <p style="font-size:13px;color:var(--gris-500);margin-bottom:12px">Los registros diarios de temperatura de cada vehículo se suben en la carpeta <strong>12 — Control de Temperatura</strong> del repositorio. Las alertas se gestionan como hallazgos en el módulo de NC.</p>
-        <button class="btn btn-s" onclick="go('carpetas')">Ir a la carpeta de temperatura</button>
-      </div>
-    </div>
-
-    <!-- FLOTA -->
-    <div class="page" id="page-flota">
-      <div class="ph"><div class="ph-text"><h1>Calificación de flota</h1><p>Documentos de calificación de vehículos — NT 147.</p></div></div>
-      <div class="card">
-        <div class="card-title">Vehículos calificados</div>
-        <p style="font-size:13px;color:var(--gris-500);margin-bottom:12px">Los informes de calificación (INF-NTL-CAL-V-VEH-XX) se gestionan en la carpeta <strong>Calificación flota</strong> del repositorio. Cada vehículo refrigerado debe tener su informe vigente según NT 147.</p>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-p" onclick="verCarpeta('Calificacion flota')">Ver carpeta calificación</button>
-          <button class="btn btn-s" onclick="go('subir')">Subir informe de calificación</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PROVEEDORES -->
-    <div class="page" id="page-proveedores">
-      <div class="ph"><div class="ph-text"><h1>Gestión de proveedores</h1><p>Control de proveedores externos — cl. 8.4 ISO 9001:2015.</p></div></div>
-      <div class="card">
-        <div class="card-title">Proveedores críticos</div>
-        <table>
-          <thead><tr><th>Proveedor</th><th>Servicio</th><th>Evaluación</th><th>Vigencia</th><th>Estado</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Talleres autorizados</strong></td><td>Mantención flota</td><td>Anual</td><td>Dic 2026</td><td><span class="badge b-ok">Aprobado</span></td></tr>
-            <tr><td><strong>Proveedor combustible</strong></td><td>Abastecimiento flota</td><td>Anual</td><td>Dic 2026</td><td><span class="badge b-ok">Aprobado</span></td></tr>
-            <tr><td><strong>Lab. calibración</strong></td><td>Calibración sensores temp.</td><td>Anual</td><td>Mar 2027</td><td><span class="badge b-ok">Aprobado</span></td></tr>
-            <tr><td><strong>Empresa fumigación</strong></td><td>Control de plagas</td><td>Semestral</td><td>Sep 2026</td><td><span class="badge b-rev">Por renovar</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- MANTENCION -->
-    <div class="page" id="page-mantencion">
-      <div class="ph"><div class="ph-text"><h1>Mantención de flota</h1><p>Control de mantenciones preventivas — cl. 8.5 ISO 9001:2015.</p></div></div>
-      <div class="card">
-        <p style="font-size:13px;color:var(--gris-500);margin-bottom:14px">El control de mantenciones se gestiona en <strong>NTFleet</strong>. Los documentos asociados (órdenes de trabajo, historial, garantías) se archivan en la carpeta <strong>08 — Mantención</strong>.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="https://mbravont.github.io/flota-newtrans/" target="_blank" class="btn btn-p">
-            <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            Ir a NTFleet
-          </a>
-          <button class="btn btn-s" onclick="verCarpeta('08 MANTENCIÓN')">Ver carpeta mantención</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUBIR -->
-    <div class="page" id="page-subir">
-      <div class="ph"><div class="ph-text"><h1>Subir documento</h1><p>Agrega un documento al SGC. Todos los campos marcados son obligatorios.</p></div></div>
-      <div class="card" style="max-width:600px">
-        <div class="fr">
-          <div class="field"><label>Código *</label><input type="text" id="d-codigo" placeholder="Ej: PRO-021, FOR-010, INF-NTL-CAL-V-VEH-74" /></div>
-          <div class="field"><label>Versión *</label><input type="text" id="d-version" placeholder="v1.0" /></div>
-        </div>
-        <div class="field"><label>Nombre del documento *</label><input type="text" id="d-nombre" placeholder="Nombre completo del documento" /></div>
-        <div class="fr">
-          <div class="field"><label>Carpeta *</label>
-            <select id="d-carpeta">
-              <option value="">Seleccionar carpeta…</option>
-            </select>
-          </div>
-          <div class="field"><label>Tipo de documento *</label>
-            <select id="d-tipo">
-              <option value="">Seleccionar…</option>
-              <option>Política</option><option>Procedimiento</option><option>Instructivo</option>
-              <option>Formato</option><option>Registro</option><option>Informe</option>
-              <option>Certificado</option><option>Acuerdo</option><option>Referencia externa</option><option>Otro</option>
-            </select>
-          </div>
-        </div>
-        <div class="fr">
-          <div class="field"><label>Responsable *</label><input type="text" id="d-responsable" placeholder="Nombre del responsable" /></div>
-          <div class="field"><label>Fecha de emisión *</label><input type="date" id="d-fecha" /></div>
-        </div>
-        <div class="field"><label>Estado</label>
-          <select id="d-estado"><option>Vigente</option><option>En revisión</option><option>Obsoleto</option></select>
-        </div>
-        <div class="field"><label>Descripción</label><textarea id="d-desc" placeholder="Breve descripción del documento y su alcance…"></textarea></div>
-        <div class="field"><label>Archivo PDF</label>
-          <div class="upload-zone" onclick="document.getElementById('d-file').click()">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <p><strong>Clic para seleccionar</strong> o arrastra el PDF aquí</p>
-            <p id="fname" style="margin-top:6px;font-size:12px;color:var(--azul-med)"></p>
-          </div>
-          <input type="file" id="d-file" accept=".pdf,.docx,.xlsx" style="display:none" onchange="selFile(this)" />
-        </div>
-        <div style="display:flex;gap:10px;margin-top:4px">
-          <button class="btn btn-p" onclick="doSubir()"><svg viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Subir al SGC</button>
-          <button class="btn btn-s" onclick="go('todos')">Cancelar</button>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /main -->
-</div><!-- /app -->
-
-<!-- MODAL NC -->
-<div class="modal-overlay" id="modal-nc">
-  <div class="modal">
-    <div class="mh"><h2 id="modal-nc-title">Registrar hallazgo / NC</h2><button class="mclose" onclick="cerrarNC()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="mb">
-      <div class="field"><label>Descripción del hallazgo *</label><input type="text" id="nc-titulo" placeholder="Ej: Temperatura fuera de rango vehículo SHJT-73" /></div>
-      <div class="fr">
-        <div class="field"><label>Tipo</label><select id="nc-tipo"><option>No conformidad</option><option>Observación</option><option>Oportunidad de mejora</option></select></div>
-        <div class="field"><label>Severidad</label><select id="nc-sev"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
-      </div>
-      <div class="fr">
-        <div class="field"><label>Cláusula ISO 9001</label><select id="nc-cl"><option value="">—</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div>
-        <div class="field"><label>Origen</label><select id="nc-origen"><option>Auditoría interna</option><option>Auditoría externa</option><option>Reclamo cliente</option><option>Operación diaria</option><option>Control de temperatura</option><option>Mantención</option><option>Otro</option></select></div>
-      </div>
-      <div class="fr">
-        <div class="field"><label>Responsable *</label><input type="text" id="nc-resp" placeholder="Nombre del responsable" /></div>
-        <div class="field"><label>Fecha límite *</label><input type="date" id="nc-fecha" /></div>
-      </div>
-      <div class="field"><label>Descripción detallada</label><textarea id="nc-desc" placeholder="Contexto, evidencia, dónde se detectó…"></textarea></div>
-      <div class="field"><label>Acción correctiva / inmediata</label><textarea id="nc-accion" placeholder="Acción propuesta…" style="min-height:55px"></textarea></div>
-    </div>
-    <div class="mf"><button class="btn btn-s" onclick="cerrarNC()">Cancelar</button><button class="btn btn-p" onclick="guardarNC()">Registrar</button></div>
-  </div>
-</div>
-
-<!-- MODAL RECLAMO -->
-<div class="modal-overlay" id="modal-rec">
-  <div class="modal">
-    <div class="mh"><h2>Registrar reclamo</h2><button class="mclose" onclick="cerrarRec()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="mb">
-      <div class="field"><label>Cliente *</label><input type="text" id="rec-cliente" placeholder="Nombre del cliente / laboratorio" /></div>
-      <div class="field"><label>Descripción del reclamo *</label><textarea id="rec-desc" placeholder="Detalla el reclamo recibido…"></textarea></div>
-      <div class="fr">
-        <div class="field"><label>Categoría</label><select id="rec-cat"><option>Temperatura</option><option>Plazo de entrega</option><option>Documentación</option><option>Estado del producto</option><option>Trato del personal</option><option>Otro</option></select></div>
-        <div class="field"><label>Fecha del reclamo</label><input type="date" id="rec-fecha" /></div>
-      </div>
-      <div class="fr">
-        <div class="field"><label>Responsable seguimiento</label><input type="text" id="rec-resp" placeholder="Nombre" /></div>
-        <div class="field"><label>Fecha límite respuesta</label><input type="date" id="rec-limite" /></div>
-      </div>
-      <div class="field"><label>Acción inmediata</label><textarea id="rec-accion" placeholder="Acción tomada o propuesta…" style="min-height:55px"></textarea></div>
-    </div>
-    <div class="mf"><button class="btn btn-s" onclick="cerrarRec()">Cancelar</button><button class="btn btn-p" onclick="guardarRec()">Registrar</button></div>
-  </div>
-</div>
-
+<!-- TOAST -->
 <div id="toast"></div>
 
-<script>
-// ═══════════════════════════════════════
-// CONFIG — reemplaza con tus valores
-// ═══════════════════════════════════════
-const SB_URL = 'https://ptngxcstgcpfafruhuvv.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0bmd4Y3N0Z2NwZmFmcnVodXZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MzY5MTksImV4cCI6MjA5NzIxMjkxOX0.WBavK-5I4miYawWO61_hlHga_WxCBUxfQNYtHovNj7w';
-let sb = null;
-try { sb = window.supabase.createClient(SB_URL, SB_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false
-  }
-}); } catch(e) { console.error('Supabase init error:', e); }
-const DEMO = !sb || false;
+<!-- HEADER -->
+<header>
+  <div class="logo">NT<span>Fleet</span></div>
+  <div class="header-right">
+    <div id="user-info" style="display:none;align-items:center;gap:8px;">
+      <span id="user-nombre" style="font-size:12px;color:var(--muted)"></span>
+      <span id="user-rol-badge" class="badge badge-blue" style="font-size:10px;"></span>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="doLogout()">Salir</button>
+    </div>
+    <div id="status-dot"></div>
+    <span id="status-label">Conectando…</span>
+  </div>
+</header>
 
-// ═══════════════════════════════════════
-// ROL DEL USUARIO
-// ═══════════════════════════════════════
-let MI_ROL = null; // 'Administrador' | 'Gestor' | 'Lector'
+<!-- NAV -->
+<nav>
+  <button class="nav-btn active" onclick="showTab('vehiculos')">🚛 Vehículos</button>
+  <button class="nav-btn" onclick="showTab('mantencion')">🔧 Mantención</button>
+  <button class="nav-btn" onclick="showTab('ciudades')">📍 Ciudades</button>
+  <button class="nav-btn" onclick="showTab('odometros')">⛽ Odómetros</button>
+  <button class="nav-btn" onclick="showTab('documentos')">📄 Documentos</button>
+</nav>
 
-function esAdmin()  { return MI_ROL === 'Administrador'; }
-function esGestor() { return MI_ROL === 'Administrador' || MI_ROL === 'Gestor'; }
-function esLector() { return MI_ROL === 'Lector'; }
+<!-- MAIN -->
+<main>
 
-async function cargarRol(userId) {
-  if (!userId) { MI_ROL = 'Lector'; return; }
-  try {
-    const { data } = await sb.from('perfiles').select('rol').eq('id', userId).single();
-    MI_ROL = data?.rol || 'Lector';
-  } catch { MI_ROL = 'Lector'; }
-}
+  <!-- ═══════════════ TAB: VEHÍCULOS ═══════════════ -->
+  <div id="tab-vehiculos" class="tab active">
+    <div class="page-title">
+      Vehículos
+      <span class="sub">Flota activa Newtrans</span>
+    </div>
 
-function aplicarRol() {
-  const itemSubir     = document.querySelector('[data-p="subir"]');
-  const itemHallazgos = document.querySelector('[data-p="hallazgos"]');
-  const itemReclamos  = document.querySelector('[data-p="reclamos"]');
-  const itemIndicadores = document.querySelector('[data-p="indicadores"]');
-
-  if (esLector()) {
-    if (itemSubir)       itemSubir.style.display = 'none';
-    if (itemHallazgos)   itemHallazgos.style.display = 'none';
-    if (itemReclamos)    itemReclamos.style.display = 'none';
-    if (itemIndicadores) itemIndicadores.style.display = 'none';
-  }
-
-  // Badge de rol en topbar
-  const badge = document.getElementById('rol-badge');
-  if (badge) {
-    badge.textContent = MI_ROL;
-    if (esAdmin())       { badge.style.background='rgba(255,255,255,0.2)'; badge.style.color='#fff'; }
-    else if (esGestor()) { badge.style.background='rgba(255,200,80,0.25)'; badge.style.color='#FFE082'; }
-    else                 { badge.style.background='rgba(255,255,255,0.1)'; badge.style.color='rgba(255,255,255,0.6)'; }
-  }
-}
-
-
-// ═══════════════════════════════════════
-// CARPETAS — estructura real de Newtrans
-// ═══════════════════════════════════════
-const CARPETAS = [
-  { id:'01-ctrl-doc',   nombre:'01 Control Documentario',       emoji:'📋', clausula:'Cl. 7 — Soporte',       color:'#EBF2FB', tc:'#1A3A5C', desc:'Listado maestro, control de versiones, distribución de documentos' },
-  { id:'01-gerencia',   nombre:'01 Gerencia General',           emoji:'🏢', clausula:'Cl. 5 — Liderazgo',     color:'#E8F5EE', tc:'#1E6B45', desc:'Política de calidad, objetivos, organigrama, actas de gerencia' },
-  { id:'02-rrhh',       nombre:'02 RRHH',                       emoji:'👥', clausula:'Cl. 7 — Soporte',       color:'#EEF0FE', tc:'#3B3BAA', desc:'Contratos, competencias, capacitaciones, diplomas' },
-  { id:'03-reclamos',   nombre:'03 Reclamos',                   emoji:'💬', clausula:'Cl. 10 — Mejora',       color:'#FDEAEA', tc:'#8B1F1F', desc:'Registro y seguimiento de reclamos de clientes' },
-  { id:'04-hallazgos',  nombre:'04 Hallazgos',                  emoji:'⚠️', clausula:'Cl. 10 — Mejora',       color:'#FEF3DC', tc:'#7A4A00', desc:'No conformidades, observaciones y oportunidades de mejora' },
-  { id:'05-auditoria',  nombre:'05 Auditoría',                  emoji:'✅', clausula:'Cl. 9 — Evaluación',    color:'#E8F5EE', tc:'#1E6B45', desc:'Planes, informes y registros de auditorías internas y externas' },
-  { id:'06-operaciones',nombre:'06 Operaciones',                emoji:'🚚', clausula:'Cl. 8 — Operación',     color:'#EBF2FB', tc:'#1A3A5C', desc:'Procedimientos operacionales, rutas, distribución' },
-  { id:'07-revision',   nombre:'07 Revisión por la Dirección',  emoji:'📊', clausula:'Cl. 9 — Evaluación',    color:'#EEF0FE', tc:'#3B3BAA', desc:'Actas de revisión por la dirección, seguimiento de decisiones' },
-  { id:'08-mantencion', nombre:'08 Mantención',                 emoji:'🔧', clausula:'Cl. 8 — Operación',     color:'#F1EFE8', tc:'#5F5E5A', desc:'Órdenes de trabajo, historial de mantenciones, garantías' },
-  { id:'09-plagas',     nombre:'09 Control de Plaga y Limpieza',emoji:'🧹', clausula:'Cl. 8 — Operación',     color:'#E8F5EE', tc:'#1E6B45', desc:'Certificados de fumigación, registros de limpieza de bodegas' },
-  { id:'10-seguridad',  nombre:'10 Seguridad',                  emoji:'🦺', clausula:'Cl. 7/8 — Soporte',     color:'#FEF3DC', tc:'#7A4A00', desc:'Protocolos de seguridad, EPP, informes de incidentes' },
-  { id:'11-proveedor',  nombre:'11 Proveedor',                  emoji:'🤝', clausula:'Cl. 8.4 — Compras',     color:'#EBF2FB', tc:'#1A3A5C', desc:'Evaluación de proveedores, contratos, acuerdos de servicio' },
-  { id:'12-temperatura',nombre:'12 Control de Temperatura',     emoji:'🌡️', clausula:'Cl. 8.5 · NT 147',      color:'#EEF0FE', tc:'#3B3BAA', desc:'Registros diarios de temperatura, alertas, investigaciones' },
-  { id:'14-documentos', nombre:'14 Documentos',                 emoji:'📁', clausula:'Cl. 7 — Soporte',       color:'#F1EFE8', tc:'#5F5E5A', desc:'Documentos generales del SGC' },
-  { id:'15-acuerdos',   nombre:'15 Acuerdos',                   emoji:'📝', clausula:'Cl. 8 — Operación',     color:'#E8F5EE', tc:'#1E6B45', desc:'Contratos con clientes, acuerdos de nivel de servicio' },
-  { id:'16-prevencion', nombre:'16 Prevención',                 emoji:'🛡️', clausula:'Cl. 6 — Planificación', color:'#FDEAEA', tc:'#8B1F1F', desc:'Gestión de riesgos y oportunidades, plan de prevención' },
-  { id:'cal-flota',     nombre:'Calificación flota',            emoji:'🚛', clausula:'NT 147 — Flota',         color:'#E8F5EE', tc:'#1E6B45', desc:'Informes de calificación de vehículos refrigerados (INF-NTL-CAL-V-VEH-XX)' },
-  { id:'cal-calib',     nombre:'Certificado de Calibración',    emoji:'⚖️', clausula:'Cl. 7.1.5 — Metrología',color:'#EBF2FB', tc:'#1A3A5C', desc:'Certificados de calibración de sensores y equipos de medición' },
-  { id:'diplomas',      nombre:'Diplomas',                      emoji:'🎓', clausula:'Cl. 7.2 — Competencias', color:'#EEF0FE', tc:'#3B3BAA', desc:'Diplomas y certificados de capacitación del personal' },
-];
-
-// ═══════════════════════════════════════
-// DATOS DEMO
-// ═══════════════════════════════════════
-let DOCS = [];
-
-let NCS = [];
-
-let RECS = [];
-
-let currentUser = null;
-
-// ═══════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════
-const toast = msg => {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-};
-const fFecha = f => f ? new Date(f+'T00:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-const bEstado = e => {
-  const m = {'Vigente':'b-ok','En revisión':'b-rev','Obsoleto':'b-obs'};
-  return `<span class="badge ${m[e]||'b-obs'}">${e}</span>`;
-};
-const bSev = s => {
-  const m={'Alta':'b-rojo','Media':'b-rev','Baja':'b-ok'};
-  return `<span class="badge ${m[s]||'b-obs'}">${s}</span>`;
-};
-
-// ═══════════════════════════════════════
-// NAV
-// ═══════════════════════════════════════
-function go(p) {
-  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-  const pg = document.getElementById('page-'+p);
-  if (pg) pg.classList.add('active');
-  document.querySelectorAll(`[data-p="${p}"]`).forEach(x => x.classList.add('active'));
-  const fns = {
-    inicio: renderInicio, carpetas: renderCarpetas, todos: () => renderTodos(DOCS),
-    hallazgos: renderNC, reclamos: renderRec
-  };
-  if (fns[p]) fns[p]();
-  // Recargar datos frescos de Supabase al navegar a módulos clave
-  if (['inicio','carpetas','todos','hallazgos','reclamos'].includes(p) && sb) {
-    cargarDatos().then(() => { if (fns[p]) fns[p](); });
-  }
-}
-
-// ═══════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════
-async function doLogin() {
-  const e = document.getElementById('le').value.trim();
-  const p = document.getElementById('lp').value;
-  const err = document.getElementById('lerr');
-  err.style.display = 'none';
-  if (!e || !p) { err.textContent='Ingresa correo y contraseña.'; err.style.display='block'; return; }
-  if (DEMO) { currentUser = { email: e, nombre: e.split('@')[0] }; iniciarApp(); return; }
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email: e, password: p });
-    if (error) {
-      console.error('Auth error:', error.message, error.status);
-      err.textContent = 'Error: ' + error.message;
-      err.style.display = 'block';
-      return;
-    }
-    currentUser = data.user;
-    iniciarApp();
-  } catch(ex) {
-    console.error('Login exception:', ex);
-    err.textContent = 'Error de conexión. Revisa la consola (F12).';
-    err.style.display = 'block';
-  }
-}
-document.getElementById('lp').addEventListener('keydown', ev => { if(ev.key==='Enter') doLogin(); });
-
-function doLogout() {
-  if (sb && !DEMO) sb.auth.signOut();
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-}
-
-async function iniciarApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  const nom = currentUser?.nombre || currentUser?.email?.split('@')[0] || 'Usuario';
-  const ini = nom.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-  document.getElementById('uinit').textContent = ini;
-  document.getElementById('uname').textContent = nom;
-  // Cargar rol desde Supabase
-  await cargarRol(currentUser?.id);
-  aplicarRol();
-  document.getElementById('wmsg').textContent =
-    `Bienvenido, ${nom}. ISO 9001:2015 · NT 147 · NT 208 · Rol: ${MI_ROL}`;
-  poblarSelectCarpetas();
-  // Cargar datos desde Supabase
-  await cargarDatos();
-  go('inicio');
-}
-
-async function cargarDatos() {
-  try {
-    const [docsRes, ncsRes, recsRes] = await Promise.all([
-      sb.from('documentos').select('*').order('created_at', { ascending: false }),
-      sb.from('hallazgos').select('*').order('created_at', { ascending: false }),
-      sb.from('reclamos').select('*').order('created_at', { ascending: false })
-    ]);
-    if (docsRes.data) DOCS = docsRes.data.map(d => ({ ...d, desc: d.descripcion }));
-    if (ncsRes.data)  NCS  = ncsRes.data;
-    if (recsRes.data) RECS = recsRes.data;
-  } catch(e) {
-    console.error('Error cargando datos:', e);
-    toast('Error al cargar datos desde la base de datos.');
-  }
-}
-
-function poblarSelectCarpetas() {
-  const opts = CARPETAS.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-  document.getElementById('d-carpeta').innerHTML = '<option value="">Seleccionar carpeta…</option>' + opts;
-  document.getElementById('f-carpeta').innerHTML = '<option value="">Todas las carpetas</option>' + opts;
-}
-
-// ═══════════════════════════════════════
-// RENDER INICIO
-// ═══════════════════════════════════════
-function renderInicio() {
-  document.getElementById('k-docs').textContent = DOCS.filter(d=>d.estado==='Vigente').length;
-  document.getElementById('k-rev').textContent  = DOCS.filter(d=>d.estado==='En revisión').length;
-  const nc = NCS.filter(n=>n.estado==='Abierta');
-  document.getElementById('k-nc').textContent   = nc.length;
-  document.getElementById('nc-badge').textContent= nc.length;
-  document.getElementById('rec-badge').textContent= RECS.filter(r=>r.estado==='Abierto').length;
-
-  // KPI mantención
-  const km = document.getElementById('k-mant');
-  if (km) { km.innerHTML='88<span style="font-size:16px">%</span>'; document.getElementById('k-mant-bar').style.width='88%'; }
-
-  // NC home
-  document.getElementById('nc-home').innerHTML = nc.length
-    ? nc.slice(0,3).map(n=>`
-      <div class="nc-item">
-        <div class="nc-bar nb-${n.severidad==='Alta'?'alta':n.severidad==='Media'?'media':'baja'}"></div>
-        <div class="nc-body">
-          <div class="nc-title">${n.titulo}</div>
-          <div class="nc-meta"><span>${n.tipo}</span><span>Resp: ${n.responsable}</span><span>Vence: ${fFecha(n.fecha_limite)}</span>${bSev(n.severidad)}</div>
-        </div>
-      </div>`).join('')
-    : '<div class="empty" style="padding:20px"><p>Sin hallazgos abiertos</p></div>';
-
-  // Docs home
-  document.getElementById('docs-home').innerHTML = DOCS.slice(0,5).map(d=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gris-100)">
-      <span class="code">${d.codigo}</span>
-      <span style="flex:1;font-size:12px;color:var(--gris-900)">${d.nombre}</span>
-      ${bEstado(d.estado)}
-    </div>`).join('');
-}
-
-// ═══════════════════════════════════════
-// RENDER CARPETAS
-// ═══════════════════════════════════════
-function renderCarpetas() {
-  document.getElementById('folder-grid').innerHTML = CARPETAS.map(c => {
-    const cnt = DOCS.filter(d=>d.carpeta_id===c.id).length;
-    return `
-    <div class="folder-card" onclick="verCarpeta('${c.id}')">
-      <div class="folder-icon" style="background:${c.color}">${c.emoji}</div>
-      <div style="flex:1;min-width:0">
-        <div class="folder-name">${c.nombre}</div>
-        <div class="folder-meta">${c.desc}</div>
-        <div class="folder-clausula"><span class="badge b-azul" style="font-size:10px">${c.clausula}</span> <span style="font-size:11px;color:var(--gris-500)">${cnt} doc${cnt!==1?'s':''}</span></div>
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-vehiculos">
+      <div class="stat-card">
+        <div class="stat-label">Total Vehículos</div>
+        <div class="stat-value" id="s-total">—</div>
       </div>
-    </div>`;
-  }).join('');
-  // Ocultar botón subir si es lector
-  const btnSubir = document.querySelector('#page-carpetas .btn-p');
-  if (btnSubir) btnSubir.style.display = esLector() ? 'none' : 'inline-flex';
-}
+      <div class="stat-card">
+        <div class="stat-label">Activos</div>
+        <div class="stat-value" id="s-activos" style="color:var(--green)">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">En Mantención</div>
+        <div class="stat-value" id="s-mant" style="color:var(--orange)">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Inactivos</div>
+        <div class="stat-value" id="s-inact" style="color:var(--red)">—</div>
+      </div>
+    </div>
 
-function verCarpeta(cid) {
-  const c = CARPETAS.find(x=>x.id===cid||x.nombre===cid);
-  if (!c) return;
-  document.getElementById('detalle-titulo').textContent = c.nombre;
-  document.getElementById('detalle-desc').textContent = c.desc + ' · ' + c.clausula;
-  const docs = DOCS.filter(d=>d.carpeta_id===c.id);
-  document.getElementById('detalle-tbody').innerHTML = docs.length
-    ? docs.map(d=>`<tr>
-        <td><span class="code">${d.codigo}</span></td>
-        <td><strong style="color:var(--gris-900)">${d.nombre}</strong>${d.desc?`<br><small style="color:var(--gris-500)">${d.desc}</small>`:''}</td>
-        <td>${d.tipo}</td>
-        <td style="color:var(--gris-500)">${d.version}</td>
-        <td>${d.responsable}</td>
-        <td>${bEstado(d.estado)}</td>
-        <td><div style="display:flex;gap:4px">
-          ${d.url && !esLector()?`<button class="btn btn-s btn-sm" onclick="window.open('${d.url}')">PDF</button>`:(d.url && esLector()?`<span class="badge b-obs" style="font-size:10px">Sin descarga</span>`:`<button class="btn btn-s btn-sm" disabled style="opacity:.4">PDF</button>`)}
-          ${esAdmin()?`<button class="btn btn-r btn-sm" onclick="delDoc(${d.id})">✕</button>`:''}
-        </div></td>
-      </tr>`).join('')
-    : '<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--gris-500)">Sin documentos en esta carpeta. <a onclick="go(\'subir\')" style="color:var(--azul-med);cursor:pointer">Subir el primero →</a></td></tr>';
-  go('carpeta-detalle');
-}
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <input class="search-input" id="search-vehiculos" type="text" placeholder="Buscar patente, tipo, ciudad…" oninput="filterVehiculos()" />
+      <select class="filter-sel" id="filter-tipo" onchange="filterVehiculos()">
+        <option value="">Todos los tipos</option>
+        <option>Camión</option>
+        <option>Tracto</option>
+        <option>Camioneta</option>
+        <option>Furgón</option>
+      </select>
+      <select class="filter-sel" id="filter-estado" onchange="filterVehiculos()">
+        <option value="">Todos los estados</option>
+        <option>Operativo</option>
+        <option>En mantención</option>
+        <option>Inactivo</option>
+      </select>
+      <select class="filter-sel" id="filter-ciudad-veh" onchange="filterVehiculos()">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadVehiculos().then(reaplicarFiltroOperador)">↺ Actualizar</button>
+      <button class="btn btn-primary ml-auto" onclick="openModalVeh()">+ Nuevo Vehículo</button>
+    </div>
 
-// ═══════════════════════════════════════
-// RENDER TODOS
-// ═══════════════════════════════════════
-function renderTodos(docs) {
-  document.getElementById('todos-tbody').innerHTML = docs.length
-    ? docs.map(d=>{
-        const c = CARPETAS.find(x=>x.id===d.carpeta_id);
-        return `<tr>
-          <td><span class="code">${d.codigo}</span></td>
-          <td><strong>${d.nombre}</strong>${d.desc?`<br><small style="color:var(--gris-500)">${d.desc}</small>`:''}</td>
-          <td><span style="font-size:12px;color:var(--gris-700)">${c?c.emoji+' '+c.nombre.substring(0,20):'—'}</span></td>
-          <td>${d.tipo}</td><td>${d.responsable}</td><td style="color:var(--gris-500)">${d.version}</td>
-          <td>${bEstado(d.estado)}</td>
-          <td><div style="display:flex;gap:4px">
-            ${d.url && !esLector()?`<button class="btn btn-s btn-sm" onclick="window.open('${d.url}')">PDF</button>`:(d.url && esLector()?`<span class="badge b-obs" style="font-size:10px">Sin descarga</span>`:`<button class="btn btn-s btn-sm" disabled style="opacity:.4">PDF</button>`)}
-            ${esAdmin()?`<button class="btn btn-r btn-sm" onclick="delDoc(${d.id})">✕</button>`:''}
-          </div></td>
-        </tr>`;}).join('')
-    : '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--gris-500)">Sin resultados.</td></tr>';
-}
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Patente</th>
+            <th>Tipo</th>
+            <th>Marca / Modelo</th>
+            <th>Año</th>
+            <th>Ciudad</th>
+            <th>Odómetro</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-vehiculos">
+          <tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-function filtrarTodos() {
-  const c = document.getElementById('f-carpeta').value;
-  const e = document.getElementById('f-estado').value;
-  let d = DOCS;
-  if (c) d = d.filter(x=>x.carpeta_id===c);
-  if (e) d = d.filter(x=>x.estado===e);
-  renderTodos(d);
-}
+  <!-- ═══════════════ TAB: MANTENCIÓN ═══════════════ -->
+  <div id="tab-mantencion" class="tab">
+    <div class="page-title">
+      Mantención Preventiva
+      <span class="sub">Registro de servicios</span>
+    </div>
 
-async function delDoc(id) {
-  if (!confirm('¿Eliminar este documento del SGC?')) return;
-  const { error } = await sb.from('documentos').delete().eq('id', id);
-  if (error) { toast('Error al eliminar: ' + error.message); return; }
-  await cargarDatos();
-  renderTodos(DOCS);
-  toast('Documento eliminado.');
-}
+    <div class="toolbar">
+      <input class="search-input" id="search-mant" type="text" placeholder="Buscar patente, tipo servicio…" oninput="filterMantencion()" />
+      <select class="filter-sel" id="filter-mant-tipo" onchange="filterMantencion()">
+        <option value="">Todos los servicios</option>
+        <option>Cambio Aceite</option>
+        <option>Cambio Filtros</option>
+        <option>Revisión Frenos</option>
+        <option>Neumáticos</option>
+        <option>Revisión General</option>
+        <option>Otro</option>
+      </select>
+      <select class="filter-sel" id="filter-mant-estado" onchange="filterMantencion()">
+        <option value="">Todos los estados</option>
+        <option value="vencido">🔴 Vencidos</option>
+        <option value="proximo">🟠 Próximos</option>
+        <option value="aldia">🟢 Al día</option>
+      </select>
+      <select class="filter-sel" id="filter-ciudad-mant" onchange="filterMantencion()">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadMantencion().then(reaplicarFiltroOperador)">↺ Actualizar</button>
+      <button class="btn btn-ghost" onclick="exportarMantExcel()">⬇ Exportar Excel</button>
+      <button class="btn btn-primary ml-auto" onclick="openModalMant()">+ Nuevo Servicio</button>
+    </div>
 
-// ═══════════════════════════════════════
-// RENDER NC
-// ═══════════════════════════════════════
-function renderNC() {
-  document.getElementById('nc-badge').textContent = NCS.filter(n=>n.estado==='Abierta').length;
-  document.getElementById('nc-lista').innerHTML = NCS.length
-    ? NCS.map(n=>`
-      <div class="nc-item">
-        <div class="nc-bar nb-${n.severidad==='Alta'?'alta':n.severidad==='Media'?'media':'baja'}"></div>
-        <div class="nc-body">
-          <div class="nc-title">${n.titulo}</div>
-          <p style="font-size:12px;color:var(--gris-700);margin:4px 0">${n.descripcion||n.desc||''}</p>
-          ${n.accion?`<p style="font-size:11px;color:var(--azul-med);margin:3px 0">→ Acción: ${n.accion}</p>`:''}
-          <div class="nc-meta">
-            <span>${n.tipo}</span><span>Cl. ${n.clausula}</span>
-            <span>Origen: ${n.origen}</span><span>Resp: ${n.responsable}</span>
-            <span>Vence: ${fFecha(n.fecha_limite)}</span>
-            ${bSev(n.severidad)}${bEstado(n.estado)}
-          </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Última Actualización</th>
+            <th>Patente</th>
+            <th>Ciudad</th>
+            <th>KM Última Mantención</th>
+            <th>KM Actual</th>
+            <th>KM Faltante</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-mantencion">
+          <tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TAB: CIUDADES ═══════════════ -->
+  <div id="tab-ciudades" class="tab">
+    <div class="page-title">
+      Ciudades
+      <span class="sub">Operaciones por agencia</span>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn btn-ghost" onclick="loadCiudades()">↺ Actualizar</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ciudad</th>
+            <th>Total Flota</th>
+            <th>Operativos</th>
+            <th>En Mantención</th>
+            <th>Próximos (&le;1.000 km)</th>
+            <th>Vencidos</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-ciudades">
+          <tr><td colspan="5" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════ TAB: ODÓMETROS ═══════════════ -->
+  <div id="tab-odometros" class="tab">
+    <div class="page-title">
+      Actualización de Odómetros
+      <span class="sub">Carga masiva desde archivo Aranco</span>
+    </div>
+
+    <!-- Instrucciones -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;">
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px;color:var(--accent)">¿Cómo funciona?</div>
+      <ol style="color:var(--muted);font-size:13px;line-height:2;padding-left:20px;">
+        <li>Exporta el reporte de odómetros desde <strong style="color:var(--text)">Aranco</strong></li>
+        <li>El archivo debe tener al menos dos columnas: <strong style="color:var(--text)">Patente</strong> y <strong style="color:var(--text)">Odómetro</strong> (cualquier nombre)</li>
+        <li>Selecciona el archivo CSV o Excel abajo</li>
+        <li>Mapea qué columna es la patente y cuál el odómetro</li>
+        <li>Haz clic en <strong style="color:var(--text)">Actualizar Odómetros</strong> y la app actualiza Supabase automáticamente</li>
+      </ol>
+    </div>
+
+    <!-- Upload zone -->
+    <div style="background:var(--surface);border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;margin-bottom:24px;transition:border-color .2s;cursor:pointer"
+         id="drop-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+         ondragleave="this.style.borderColor='var(--border)'"
+         ondrop="handleDrop(event)">
+      <div style="font-size:32px;margin-bottom:8px">📂</div>
+      <div style="font-family:var(--font-head);font-size:15px;color:var(--text);margin-bottom:4px">Arrastra tu archivo aquí o haz clic para seleccionar</div>
+      <div style="font-size:12px;color:var(--muted)">CSV o Excel (.xlsx, .xls)</div>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])" />
+    </div>
+
+    <!-- Mapeo de columnas -->
+    <div id="col-mapper" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;">
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:16px;">Mapear columnas</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:500px;">
+        <div class="form-group">
+          <label>Columna de Patente *</label>
+          <select id="col-patente" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;width:100%"></select>
         </div>
-        ${n.estado==='Abierta'?`<button class="btn btn-s btn-sm" onclick="cerrarNCid(${n.id})" style="flex-shrink:0">Cerrar</button>`:''}
-      </div>`).join('')
-    : '<div class="empty"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg><p>Sin hallazgos registrados</p></div>';
-}
-
-function abrirNC() { document.getElementById('modal-nc').classList.add('open'); }
-function cerrarNC() { document.getElementById('modal-nc').classList.remove('open'); }
-
-async function guardarNC() {
-  const titulo = document.getElementById('nc-titulo').value.trim();
-  const resp   = document.getElementById('nc-resp').value.trim();
-  const fecha  = document.getElementById('nc-fecha').value;
-  if (!titulo||!resp||!fecha) { toast('Completa los campos obligatorios.'); return; }
-  const n = {
-    id: Date.now(), titulo, tipo: document.getElementById('nc-tipo').value,
-    severidad: document.getElementById('nc-sev').value, clausula: document.getElementById('nc-cl').value,
-    origen: document.getElementById('nc-origen').value, responsable: resp, fecha_limite: fecha,
-    desc: document.getElementById('nc-desc').value, accion: document.getElementById('nc-accion').value, estado:'Abierta'
-  };
-  if (!DEMO && sb) { const {data} = await sb.from('no_conformidades').insert([n]).select(); if(data) n.id=data[0].id; }
-  NCS.unshift(n);
-  cerrarNC();
-  renderNC();
-  toast(`Hallazgo registrado: "${titulo}"`);
-  ['nc-titulo','nc-resp','nc-fecha','nc-desc','nc-accion'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-}
-
-async function cerrarNCid(id) {
-  if (!confirm('¿Cerrar este hallazgo?')) return;
-  if (!DEMO && sb) await sb.from('no_conformidades').update({estado:'Cerrada'}).eq('id',id);
-  const n = NCS.find(x=>x.id===id); if(n) n.estado='Cerrada';
-  renderNC(); toast('Hallazgo cerrado.');
-}
-
-// ═══════════════════════════════════════
-// RENDER RECLAMOS
-// ═══════════════════════════════════════
-function renderRec() {
-  document.getElementById('rec-badge').textContent = RECS.filter(r=>r.estado==='Abierto').length;
-  document.getElementById('rec-lista').innerHTML = RECS.length
-    ? RECS.map(r=>`
-      <div class="nc-item">
-        <div class="nc-bar nb-alta"></div>
-        <div class="nc-body">
-          <div class="nc-title">${r.cliente}</div>
-          <p style="font-size:12px;color:var(--gris-700);margin:4px 0">${r.descripcion||r.desc||''}</p>
-          ${r.accion?`<p style="font-size:11px;color:var(--azul-med);margin:3px 0">→ ${r.accion}</p>`:''}
-          <div class="nc-meta">
-            <span>Categoría: ${r.categoria}</span><span>Resp: ${r.responsable}</span>
-            <span>Vence: ${fFecha(r.fecha_limite||r.limite)}</span>${bEstado(r.estado)}
-          </div>
+        <div class="form-group">
+          <label>Columna de Odómetro *</label>
+          <select id="col-odometro" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;width:100%"></select>
         </div>
-        ${r.estado==='Abierto'?`<button class="btn btn-s btn-sm" onclick="cerrarRecid(${r.id})">Cerrar</button>`:''}
-      </div>`).join('')
-    : '<div class="empty"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><p>Sin reclamos registrados</p></div>';
-}
+      </div>
+      <button class="btn btn-ghost" style="margin-top:12px" onclick="previewData()">👁 Vista previa</button>
+    </div>
 
-function abrirReclamo() { document.getElementById('rec-fecha').value=new Date().toISOString().split('T')[0]; document.getElementById('modal-rec').classList.add('open'); }
-function cerrarRec() { document.getElementById('modal-rec').classList.remove('open'); }
+    <!-- Preview -->
+    <div id="preview-section" style="display:none;margin-bottom:24px;">
+      <div class="section-head">
+        <div class="section-title">Vista previa</div>
+        <div class="count-chip" id="preview-count"></div>
+      </div>
+      <div class="table-wrap" style="max-height:320px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Patente (archivo)</th>
+              <th>Odómetro</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-preview"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;align-items:center;">
+        <button class="btn btn-primary" onclick="runUpdate()" id="btn-update">⬆ Actualizar Odómetros</button>
+        <span id="update-progress" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+    </div>
 
-async function guardarRec() {
-  const c = document.getElementById('rec-cliente').value.trim();
-  const d = document.getElementById('rec-desc').value.trim();
-  if (!c||!d) { toast('Completa cliente y descripción.'); return; }
-  const r = {
-    cliente:c, descripcion:d, categoria:document.getElementById('rec-cat').value,
-    fecha_reclamo:document.getElementById('rec-fecha').value, responsable:document.getElementById('rec-resp').value,
-    fecha_limite:document.getElementById('rec-limite').value, accion:document.getElementById('rec-accion').value, estado:'Abierto'
-  };
-  const { error } = await sb.from('reclamos').insert([r]);
-  if (error) { toast('Error al guardar reclamo: ' + error.message); return; }
-  await cargarDatos();
-  cerrarRec();
-  renderRec();
-  toast(`Reclamo de "${c}" registrado.`);
-}
+  </div>
 
-async function cerrarRecid(id) {
-  if (!confirm('¿Cerrar este reclamo?')) return;
-  const { error } = await sb.from('reclamos').update({estado:'Cerrado'}).eq('id', id);
-  if (error) { toast('Error al cerrar reclamo: ' + error.message); return; }
-  await cargarDatos();
-  renderRec();
-  toast('Reclamo cerrado correctamente.');
-}
+  <!-- ═══════════════ TAB: DOCUMENTOS ═══════════════ -->
+  <div id="tab-documentos" class="tab">
+    <div class="page-title">
+      Documentos Vehiculares
+      <span class="sub">Revisión Técnica · Control de Gases · SOAP · Permiso de Circulación</span>
+    </div>
 
-// ═══════════════════════════════════════
-// SUBIR DOCUMENTO
-// ═══════════════════════════════════════
-function selFile(i) { const f=i.files[0]; if(f) document.getElementById('fname').textContent='📄 '+f.name; }
+    <!-- Stats documentos -->
+    <div class="stats-grid" id="stats-docs" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
+      <div class="stat-card">
+        <div class="stat-label">Total Registros</div>
+        <div class="stat-value" id="sd-total">—</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--green)">
+        <div class="stat-label">Vigentes</div>
+        <div class="stat-value" id="sd-vigente" style="color:var(--green)">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Por Vencer (≤30 días)</div>
+        <div class="stat-value" id="sd-proximo" style="color:var(--orange)">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vencidos</div>
+        <div class="stat-value" id="sd-vencido" style="color:var(--red)">—</div>
+      </div>
+    </div>
 
-async function doSubir() {
-  const cod  = document.getElementById('d-codigo').value.trim();
-  const nom  = document.getElementById('d-nombre').value.trim();
-  const carp = document.getElementById('d-carpeta').value;
-  const tipo = document.getElementById('d-tipo').value;
-  const resp = document.getElementById('d-responsable').value.trim();
-  const fech = document.getElementById('d-fecha').value;
-  const ver  = document.getElementById('d-version').value.trim() || 'v1.0';
-  const est  = document.getElementById('d-estado').value;
-  const desc = document.getElementById('d-desc').value.trim();
-  const file = document.getElementById('d-file').files[0];
-  if (!cod||!nom||!carp||!tipo||!resp||!fech) { toast('Completa todos los campos obligatorios (*)'); return; }
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <input class="search-input" id="search-docs" type="text" placeholder="Buscar patente, tipo…" oninput="filterDocumentos()" />
+      <select class="filter-sel" id="filter-docs-tipo" onchange="filterDocumentos()">
+        <option value="">Todos los tipos</option>
+        <option>Revisión Técnica</option>
+        <option>Control de Gases</option>
+        <option>SOAP</option>
+        <option>Permiso de Circulación</option>
+      </select>
+      <select class="filter-sel" id="filter-docs-estado" onchange="filterDocumentos()">
+        <option value="">Todos los estados</option>
+        <option value="vigente">Vigente</option>
+        <option value="proximo">Por Vencer</option>
+        <option value="vencido">Vencido</option>
+      </select>
+      <select class="filter-sel" id="filter-docs-ciudad" onchange="filterDocumentos()">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadDocumentos().then(reaplicarFiltroOperador)">↺ Actualizar</button>
+      <button class="btn btn-primary ml-auto" onclick="openModalDoc()">+ Nuevo Documento</button>
+    </div>
 
-  let url = null;
-  if (file && !DEMO && sb) {
-    const path = `${carp}/${cod}_${ver}_${Date.now()}.pdf`;
-    await sb.storage.from('sgc-docs').upload(path, file, {upsert:true});
-    const {data:u} = sb.storage.from('sgc-docs').getPublicUrl(path);
-    url = u?.publicUrl;
+    <!-- Tabla -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Patente</th>
+            <th>Ciudad</th>
+            <th>Tipo Documento</th>
+            <th>Vencimiento</th>
+            <th>Días Restantes</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-documentos">
+          <tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══ MODAL VEHÍCULO ═══ -->
+<div class="modal-overlay" id="modal-veh">
+  <div class="modal">
+    <h3 id="modal-veh-title">Nuevo Vehículo</h3>
+    <input type="hidden" id="veh-id" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente *</label>
+        <input type="text" id="veh-patente" placeholder="ABCD12" style="text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="veh-tipo">
+          <option value="">Seleccionar…</option>
+          <option>Camión</option>
+          <option>Tracto</option>
+          <option>Camioneta</option>
+          <option>Furgón</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Marca</label>
+        <input type="text" id="veh-marca" placeholder="Mercedes, Volvo…" />
+      </div>
+      <div class="form-group">
+        <label>Modelo</label>
+        <input type="text" id="veh-modelo" placeholder="Actros, FH…" />
+      </div>
+      <div class="form-group">
+        <label>Año</label>
+        <input type="number" id="veh-anio" placeholder="2020" min="1990" max="2030" />
+      </div>
+      <div class="form-group">
+        <label>KM Actual</label>
+        <input type="number" id="veh-km" placeholder="0" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Ciudad</label>
+        <input type="text" id="veh-ciudad" placeholder="SANTIAGO, CONCEPCION…" style="text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label>Estado *</label>
+        <select id="veh-estado">
+          <option value="">Seleccionar…</option>
+          <option>Operativo</option>
+          <option>En mantención</option>
+          <option>Inactivo</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Observaciones</label>
+        <textarea id="veh-obs" placeholder="Notas adicionales…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-veh')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVehiculo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL MANTENCIÓN ═══ -->
+<div class="modal-overlay" id="modal-mant">
+  <div class="modal">
+    <h3 id="modal-mant-title">Nuevo Servicio</h3>
+    <input type="hidden" id="mant-id" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente *</label>
+        <input type="text" id="mant-vehiculo" placeholder="ABCD12" style="text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label>Fecha Última *</label>
+        <input type="date" id="mant-fecha" />
+      </div>
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="mant-tipo">
+          <option value="">Seleccionar…</option>
+          <option>Cambio Aceite</option>
+          <option>Cambio Filtros</option>
+          <option>Revisión Frenos</option>
+          <option>Neumáticos</option>
+          <option>Revisión General</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>KM Última</label>
+        <input type="number" id="mant-km" placeholder="0" min="0" />
+      </div>
+      <div class="form-group">
+        <label>KM Próxima</label>
+        <input type="number" id="mant-km-prox" placeholder="0" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Intervalo KM</label>
+        <input type="number" id="mant-costo" placeholder="10000" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="mant-taller">
+          <option value="">Seleccionar…</option>
+          <option>Al día</option>
+          <option>Próximo</option>
+          <option>Vencido</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>KM Faltantes</label>
+        <input type="number" id="mant-desc" placeholder="0" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-mant')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMantencion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL DOCUMENTO ═══ -->
+<div class="modal-overlay" id="modal-doc">
+  <div class="modal">
+    <h3 id="modal-doc-title">Nuevo Documento</h3>
+    <input type="hidden" id="doc-id" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente *</label>
+        <select id="doc-patente"></select>
+      </div>
+      <div class="form-group">
+        <label>Tipo Documento *</label>
+        <select id="doc-tipo">
+          <option value="">Seleccionar…</option>
+          <option>Revisión Técnica</option>
+          <option>Control de Gases</option>
+          <option>SOAP</option>
+          <option>Permiso de Circulación</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fecha Vencimiento *</label>
+        <input type="date" id="doc-fecha" />
+      </div>
+      <div class="form-group full">
+        <label>Observaciones</label>
+        <textarea id="doc-obs" placeholder="Notas adicionales…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-doc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDocumento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── SUPABASE CONFIG ───────────────────────────────────────────
+const SUPABASE_URL = 'https://ahdcofcmxrfhqszevptp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_2PJl-a_zHgZsYL4or5W3NQ_PJ3UXGoo';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ─────────────────────────────────────────────────────
+let allVehiculos = [];
+let allMantencion = [];
+let allCiudades = [];
+
+// ─── INIT ──────────────────────────────────────────────────────
+// Estado global usuario
+let currentUser = null;
+let currentPerfil = null;
+
+async function init() {
+  // Verificar sesión activa
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await onLogin(session.user);
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
   }
 
-  const nuevo = { codigo:cod, nombre:nom, carpeta_id:carp, tipo, responsable:resp, version:ver, estado:est, fecha_emision:fech, descripcion:desc, url_archivo:url };
-  const { data, error } = await sb.from('documentos').insert([nuevo]).select();
-  if (error) { toast('Error al guardar: ' + error.message); return; }
-  toast(`"${cod} — ${nom}" subido correctamente.`);
-  await cargarDatos();
-  go('carpetas');
+  // Escuchar cambios de sesión
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      await onLogin(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      location.reload();
+    }
+  });
 }
 
-// ═══════════════════════════════════════
-// BUSCADOR
-// ═══════════════════════════════════════
-function doSearch(q) {
-  const box = document.getElementById('search-results');
-  if (!q||q.length<2) { box.style.display='none'; return; }
-  const res = DOCS.filter(d=>
-    d.nombre.toLowerCase().includes(q.toLowerCase())||
-    d.codigo.toLowerCase().includes(q.toLowerCase())||
-    (d.desc||'').toLowerCase().includes(q.toLowerCase())
-  ).slice(0,8);
-  if (!res.length) { box.style.display='none'; return; }
-  box.style.display = 'block';
-  box.innerHTML = res.map(d=>{
-    const c = CARPETAS.find(x=>x.id===d.carpeta_id);
-    return `<div class="sr-item" onclick="irDoc()">
-      <span class="code" style="flex-shrink:0">${d.codigo}</span>
-      <div><div class="sr-name">${d.nombre}</div><div class="sr-meta">${c?c.emoji+' '+c.nombre:'—'} · ${d.estado}</div></div>
-      ${bEstado(d.estado)}
-    </div>`;
+async function onLogin(user) {
+  currentUser = user;
+
+  // Cargar perfil
+  const { data: perfil } = await sb
+    .from('perfiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+  currentPerfil = perfil;
+
+  // Mostrar info usuario
+  if (perfil) {
+    document.getElementById('user-nombre').textContent = perfil.nombre;
+    document.getElementById('user-rol-badge').textContent = perfil.rol;
+    document.getElementById('user-info').style.display = 'flex';
+
+    // Ocultar pestaña odómetros para Operadores
+    if (perfil.rol === 'Operador') {
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        if (b.textContent.includes('Odómetros')) b.style.display = 'none';
+      });
+      document.getElementById('tab-odometros').style.display = 'none';
+    }
+  }
+
+  // Ocultar login y mostrar app
+  document.getElementById('login-screen').style.display = 'none';
+  setConnected(true);
+
+  await loadCiudades();
+  await loadVehiculos();
+  await loadMantencion();
+  await loadDocumentos();
+  renderCiudades();
+
+  // Fijar filtro de ciudad para Operador y refiltrar tablas ya cargadas
+  if (perfil?.rol === 'Operador') {
+    const ciudad = perfil.ciudad;
+    const selVeh  = document.getElementById('filter-ciudad-veh');
+    const selMant = document.getElementById('filter-ciudad-mant');
+    if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; }
+    if (selMant) { selMant.value = ciudad; selMant.disabled = true; }
+    filterVehiculos();
+    filterMantencion();
+    renderCiudades();
+  }
+}
+
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn      = document.getElementById('login-btn');
+  const errEl    = document.getElementById('login-error');
+
+  if (!email || !password) {
+    errEl.textContent = 'Ingresa correo y contraseña';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = 'Ingresando…';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = 'Error: ' + error.message;
+    errEl.style.display = 'block';
+    btn.textContent = 'Ingresar';
+    btn.disabled = false;
+  } else if (data?.user) {
+    await onLogin(data.user);
+  } else {
+    errEl.textContent = 'No se obtuvo sesión. Intenta de nuevo.';
+    errEl.style.display = 'block';
+    btn.textContent = 'Ingresar';
+    btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+}
+
+// Reaplica el filtro de ciudad fijo si el usuario es Operador
+function reaplicarFiltroOperador() {
+  if (currentPerfil?.rol === 'Operador') {
+    const ciudad = currentPerfil.ciudad;
+    const selVeh  = document.getElementById('filter-ciudad-veh');
+    const selMant = document.getElementById('filter-ciudad-mant');
+    const selDoc  = document.getElementById('filter-docs-ciudad');
+    if (selVeh)  { selVeh.value  = ciudad; selVeh.disabled  = true; }
+    if (selMant) { selMant.value = ciudad; selMant.disabled = true; }
+    if (selDoc)  { selDoc.value  = ciudad; selDoc.disabled  = true; }
+    filterVehiculos();
+    filterMantencion();
+    filterDocumentos();
+    renderCiudades();
+  }
+}
+
+function setConnected(ok) {
+  const dot   = document.getElementById('status-dot');
+  const label = document.getElementById('status-label');
+  dot.className   = ok ? 'connected' : '';
+  label.textContent = ok ? 'Conectado' : 'Sin conexión';
+}
+
+// ─── TABS ──────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+// ─── FORMAT ────────────────────────────────────────────────────
+function fmtKm(n) { return n ? Number(n).toLocaleString('es-CL') + ' km' : '—'; }
+function fmtClp(n) { return n ? '$ ' + Number(n).toLocaleString('es-CL') : '—'; }
+function fmtDate(d) {
+  if (!d) return '—';
+  // Soporta DD/MM/YYYY y YYYY-MM-DD
+  if (d.includes('/')) {
+    const [day, month, year] = d.split('/');
+    return `${day}/${month}/${year}`;
+  }
+  return new Date(d + 'T12:00:00').toLocaleDateString('es-CL');
+}
+
+function estadoBadge(e) {
+  const map = {
+    'Operativo':      'badge-green',
+    'En mantención':  'badge-orange',
+  };
+  return `<span class="badge ${map[e] || 'badge-muted'}">${e || '—'}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VEHÍCULOS
+// ═══════════════════════════════════════════════════════════════
+async function loadVehiculos() {
+  const tbody = document.getElementById('tbody-vehiculos');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
+  try {
+    const { data, error } = await sb
+      .from('vehiculos')
+      .select('*')
+      .order('patente', { ascending: true });
+    if (error) throw error;
+    allVehiculos = data || [];
+    renderVehiculos(allVehiculos);
+    updateStats();
+    populateCiudadSelect();
+    // populateVehSelect — patente libre
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+    toast(e.message, 'error');
+  }
+}
+
+function renderVehiculos(list) {
+  const tbody = document.getElementById('tbody-vehiculos');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin vehículos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(v => `
+    <tr>
+      <td><strong>${v.patente}</strong></td>
+      <td>${v.tipo || '—'}</td>
+      <td>${v.modelo || '—'}</td>
+      <td>${v.anio || '—'}</td>
+      <td>${v.ciudad || '—'}</td>
+      <td>${fmtKm(v.odometro)}</td>
+      <td>${estadoBadge(v.estado)}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="editVehiculo(${v.id})">✏️</button>
+        ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteVehiculo(${v.id},'${v.patente}')">✕</button>`}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterVehiculos() {
+  const q     = document.getElementById('search-vehiculos').value.toLowerCase();
+  const tipo  = document.getElementById('filter-tipo').value;
+  const estado= document.getElementById('filter-estado').value;
+  const ciudad = document.getElementById('filter-ciudad-veh').value;
+  const list  = allVehiculos.filter(v =>
+    (!q      || [v.patente,v.marca,v.modelo,v.ciudad].join(' ').toLowerCase().includes(q)) &&
+    (!tipo   || v.tipo === tipo) &&
+    (!estado || v.estado === estado) &&
+    (!ciudad || v.ciudad === ciudad)
+  );
+  renderVehiculos(list);
+}
+
+function updateStats() {
+  const lista = (currentPerfil?.rol === 'Operador')
+    ? allVehiculos.filter(v => v.ciudad === currentPerfil.ciudad)
+    : allVehiculos;
+  document.getElementById('s-total').textContent   = lista.length;
+  document.getElementById('s-activos').textContent = lista.filter(v => v.estado === 'Operativo').length;
+  document.getElementById('s-mant').textContent    = lista.filter(v => v.estado === 'En mantención').length;
+  document.getElementById('s-inact').textContent   = lista.filter(v => v.estado !== 'Operativo' && v.estado !== 'En mantención').length;
+}
+
+function openModalVeh() {
+  document.getElementById('modal-veh-title').textContent = 'Nuevo Vehículo';
+  document.getElementById('veh-id').value = '';
+  ['patente','marca','modelo','anio','km','obs'].forEach(f => document.getElementById('veh-'+f).value = '');
+  document.getElementById('veh-tipo').value   = '';
+  document.getElementById('veh-estado').value = '';
+  document.getElementById('modal-veh').classList.add('open');
+}
+
+function editVehiculo(id) {
+  const v = allVehiculos.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('modal-veh-title').textContent = 'Editar Vehículo';
+  document.getElementById('veh-id').value      = v.id;
+  document.getElementById('veh-patente').value = v.patente || '';
+  document.getElementById('veh-tipo').value    = v.tipo || '';
+  document.getElementById('veh-modelo').value  = v.modelo || '';
+  document.getElementById('veh-anio').value    = v.anio || '';
+  document.getElementById('veh-km').value      = v.odometro || '';
+  document.getElementById('veh-ciudad').value  = v.ciudad || '';
+  document.getElementById('veh-estado').value  = v.estado || '';
+  document.getElementById('veh-obs').value     = v.observaciones || '';
+  document.getElementById('modal-veh').classList.add('open');
+}
+
+async function saveVehiculo() {
+  const id      = document.getElementById('veh-id').value;
+  const patente = document.getElementById('veh-patente').value.trim().toUpperCase();
+  const tipo    = document.getElementById('veh-tipo').value;
+  const estado  = document.getElementById('veh-estado').value;
+
+  if (!patente || !tipo || !estado) { toast('Completa los campos obligatorios', 'error'); return; }
+
+  const payload = {
+    patente,
+    tipo,
+    modelo:   document.getElementById('veh-modelo').value.trim() || null,
+    anio:     parseInt(document.getElementById('veh-anio').value) || null,
+    odometro: parseInt(document.getElementById('veh-km').value) || 0,
+    ciudad:   document.getElementById('veh-ciudad').value.trim().toUpperCase() || null,
+    estado,
+  };
+
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('vehiculos').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('vehiculos').insert(payload));
+    }
+    if (error) throw error;
+    closeModal('modal-veh');
+    toast(id ? 'Vehículo actualizado' : 'Vehículo creado');
+    await loadVehiculos();
+    reaplicarFiltroOperador();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function deleteVehiculo(id, patente) {
+  if (!confirm(`¿Eliminar el vehículo ${patente}?`)) return;
+  const { error } = await sb.from('vehiculos').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast(`${patente} eliminado`);
+  await loadVehiculos();
+  reaplicarFiltroOperador();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MANTENCIÓN
+// ═══════════════════════════════════════════════════════════════
+async function loadMantencion() {
+  const tbody = document.getElementById('tbody-mantencion');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
+  try {
+    const { data, error } = await sb
+      .from('mantenciones')
+      .select('*')
+      .order('vehiculo_patente', { ascending: true });
+    if (error) throw error;
+    allMantencion = data || [];
+    renderMantencion(allMantencion);
+    populateCiudadFilters();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function renderMantencion(list) {
+  const tbody = document.getElementById('tbody-mantencion');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin registros de mantención</td></tr>';
+    return;
+  }
+  // Construir mapa patente -> vehiculo para cruzar odómetro y ciudad
+  const vehMap = {};
+  allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  tbody.innerHTML = list.map(m => {
+    const veh = vehMap[m.vehiculo_patente] || {};
+    const kmActual = parseFloat(veh.odometro) || 0;
+    const kmUltima = parseFloat(m.km_ultima) || 0;
+
+    // Intervalo según tipo de vehículo
+    const tipo = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipo === 'camion' || tipo === 'camión' || tipo === 'tracto') ? 20000 : 10000;
+
+    const kmRecorridos = kmActual - kmUltima;
+    const kf = intervalo - kmRecorridos;
+
+    let rowColor = '';
+    let estadoBadge = '';
+    if (kf <= 0) {
+      rowColor    = 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)';
+      estadoBadge = '<span class="badge badge-red">🔴 Vencido</span>';
+    } else if (kf <= 1000) {
+      rowColor    = 'background:rgba(249,115,22,0.07);border-left:3px solid var(--orange)';
+      estadoBadge = '<span class="badge badge-orange">🟠 Próximo</span>';
+    } else {
+      rowColor    = 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)';
+      estadoBadge = '<span class="badge badge-green">🟢 Al día</span>';
+    }
+
+    const kmFaltanteStr = kf <= 0
+      ? `<span style="color:var(--red)">-${fmtKm(Math.abs(kf))}</span>`
+      : fmtKm(kf);
+
+    return `
+    <tr style="${rowColor}">
+      <td>${fmtDate(m.fecha_ultima)}</td>
+      <td><strong>${m.vehiculo_patente || '—'}</strong></td>
+      <td>${veh.ciudad || '—'}</td>
+      <td>${fmtKm(m.km_ultima)}</td>
+      <td>${fmtKm(veh.odometro)}</td>
+      <td>${kmFaltanteStr}</td>
+      <td>${estadoBadge}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="editMantencion(${m.id})">✏️</button>
+        ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteMantencion(${m.id})">✕</button>`}
+      </td>
+    </tr>`;
   }).join('');
 }
 
-function irDoc() {
-  document.getElementById('search-results').style.display='none';
-  document.getElementById('si').value='';
-  go('todos');
+function filterMantencion() {
+  const q          = document.getElementById('search-mant').value.toLowerCase();
+  const tipoServ   = document.getElementById('filter-mant-tipo').value;
+  const ciudadMant = document.getElementById('filter-ciudad-mant').value;
+  const estadoMant = document.getElementById('filter-mant-estado') ? document.getElementById('filter-mant-estado').value : '';
+
+  const vehMap = {};
+  allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  const list = allMantencion.filter(m => {
+    const veh = vehMap[m.vehiculo_patente] || {};
+    const kmActual  = parseFloat(veh.odometro) || 0;
+    const kmUltima  = parseFloat(m.km_ultima) || 0;
+    const tipoVeh   = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipoVeh === 'camion' || tipoVeh === 'camión' || tipoVeh === 'tracto') ? 20000 : 10000;
+    const kf        = intervalo - (kmActual - kmUltima);
+    let estadoCalc;
+    if (kf <= 0)         estadoCalc = 'vencido';
+    else if (kf <= 1000) estadoCalc = 'proximo';
+    else                 estadoCalc = 'aldia';
+
+    return (!q          || [m.vehiculo_patente, m.tipo, veh.ciudad].join(' ').toLowerCase().includes(q)) &&
+           (!tipoServ   || m.tipo === tipoServ) &&
+           (!ciudadMant || veh.ciudad === ciudadMant) &&
+           (!estadoMant || estadoCalc === estadoMant);
+  });
+  renderMantencion(list);
 }
 
-document.addEventListener('click', e => {
-  if (!e.target.closest('.topbar-search-wrap')) document.getElementById('search-results').style.display='none';
+function openModalMant() {
+  document.getElementById('modal-mant-title').textContent = 'Nuevo Servicio';
+  document.getElementById('mant-id').value = '';
+  document.getElementById('mant-fecha').value = new Date().toISOString().slice(0,10);
+  ['vehiculo','km','km-prox','costo','desc'].forEach(f => document.getElementById('mant-'+f).value = '');
+  document.getElementById('mant-taller').value = '';
+  document.getElementById('mant-tipo').value = '';
+  document.getElementById('modal-mant').classList.add('open');
+}
+
+function editMantencion(id) {
+  const m = allMantencion.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('modal-mant-title').textContent = 'Editar Servicio';
+  document.getElementById('mant-id').value        = m.id;
+  document.getElementById('mant-vehiculo').value  = m.vehiculo_patente || '';
+  document.getElementById('mant-fecha').value     = m.fecha_ultima || '';
+  document.getElementById('mant-tipo').value      = m.tipo || '';
+  document.getElementById('mant-km').value        = m.km_ultima || '';
+  document.getElementById('mant-km-prox').value   = m.km_proxima || '';
+  document.getElementById('mant-costo').value     = m.intervalo_km || '';
+  document.getElementById('mant-taller').value    = m.estado_mant || '';
+  document.getElementById('mant-desc').value      = m.km_faltantes || '';
+  document.getElementById('modal-mant').classList.add('open');
+}
+
+async function saveMantencion() {
+  const id    = document.getElementById('mant-id').value;
+  const vehId = document.getElementById('mant-vehiculo').value;
+  const fecha = document.getElementById('mant-fecha').value;
+  const tipo  = document.getElementById('mant-tipo').value;
+
+  if (!vehId || !tipo) { toast('Completa los campos obligatorios', 'error'); return; }
+
+  const payload = {
+    vehiculo_patente: vehId,
+    fecha_ultima:     fecha,
+    tipo,
+    km_ultima:        parseInt(document.getElementById('mant-km').value) || null,
+    km_proxima:       parseInt(document.getElementById('mant-km-prox').value) || null,
+    intervalo_km:     parseInt(document.getElementById('mant-costo').value) || null,
+    estado_mant:      document.getElementById('mant-taller').value.trim() || null,
+    km_faltantes:     parseInt(document.getElementById('mant-desc').value) || null,
+  };
+
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('mantenciones').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('mantenciones').insert(payload));
+    }
+    if (error) throw error;
+    closeModal('modal-mant');
+    toast(id ? 'Servicio actualizado' : 'Servicio registrado');
+    await loadMantencion();
+    reaplicarFiltroOperador();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function deleteMantencion(id) {
+  if (!confirm('¿Eliminar este registro de mantención?')) return;
+  const { error } = await sb.from('mantenciones').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Registro eliminado');
+  await loadMantencion();
+  reaplicarFiltroOperador();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CIUDADES
+// ═══════════════════════════════════════════════════════════════
+async function loadCiudades() {
+  const tbody = document.getElementById('tbody-ciudades');
+  try {
+    const { data, error } = await sb
+      .from('ciudades')
+      .select('*')
+      .order('nombre');
+    if (error) throw error;
+    allCiudades = data || [];
+    populateCiudadSelect();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+async function renderCiudades() {
+  const tbody = document.getElementById('tbody-ciudades');
+  if (!allCiudades.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sin ciudades registradas</td></tr>';
+    return;
+  }
+  // Enrich with vehicle counts
+  // Usar datos ya cargados en memoria
+  const countMap   = {};
+  const operMap    = {};
+  const mantMap    = {};
+  const proxMap    = {};
+  const vencMap    = {};
+
+  allVehiculos.forEach(v => {
+    const k = v.ciudad;
+    if (!k) return;
+    countMap[k] = (countMap[k] || 0) + 1;
+    if (v.estado === 'Operativo')     operMap[k] = (operMap[k] || 0) + 1;
+    if (v.estado === 'En mantención') mantMap[k] = (mantMap[k] || 0) + 1;
+  });
+
+  // Próximos y vencidos desde mantenciones (misma fórmula que la tabla de Mantención)
+  const vehMapCiu = {};
+  allVehiculos.forEach(v => { vehMapCiu[v.patente] = v; });
+
+  allMantencion.forEach(m => {
+    const veh = vehMapCiu[m.vehiculo_patente];
+    if (!veh || !veh.ciudad) return;
+    const k = veh.ciudad;
+
+    const kmActual = parseFloat(veh.odometro) || 0;
+    const kmUltima = parseFloat(m.km_ultima) || 0;
+    const tipo = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipo === 'camion' || tipo === 'camión' || tipo === 'tracto') ? 20000 : 10000;
+    const kf = intervalo - (kmActual - kmUltima);
+
+    if (kf <= 0)        vencMap[k] = (vencMap[k] || 0) + 1;
+    else if (kf <= 1000) proxMap[k] = (proxMap[k] || 0) + 1;
+  });
+
+  const ciudadesVisibles = (currentPerfil?.rol === 'Operador')
+    ? allCiudades.filter(c => c.nombre === currentPerfil.ciudad)
+    : allCiudades;
+  tbody.innerHTML = ciudadesVisibles.map(c => `
+    <tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td>${countMap[c.nombre] || 0}</td>
+      <td><span class="badge badge-green">${operMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-orange">${mantMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-orange">${proxMap[c.nombre] || 0}</span></td>
+      <td><span class="badge badge-red">${vencMap[c.nombre] || 0}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ─── HELPERS ───────────────────────────────────────────────────
+function populateCiudadFilters() {
+  const ciudades = [...new Set(allVehiculos.map(v => v.ciudad).filter(Boolean))].sort();
+  const opts = '<option value="">Todas las ciudades</option>' + ciudades.map(c => `<option value="${c}">${c}</option>`).join('');
+  const selVeh  = document.getElementById('filter-ciudad-veh');
+  const selMant = document.getElementById('filter-ciudad-mant');
+  const prevVeh  = selVeh  ? selVeh.value  : '';
+  const prevMant = selMant ? selMant.value : '';
+  if (selVeh)  { selVeh.innerHTML  = opts; selVeh.value  = prevVeh;  }
+  if (selMant) { selMant.innerHTML = opts; selMant.value = prevMant; }
+}
+
+function populateCiudadSelect() {
+  const sel = document.getElementById('veh-ciudad');
+  sel.innerHTML = '<option value="">Sin ciudad</option>' +
+    allCiudades.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+
+function populateVehSelect() {
+  const sel = document.getElementById('mant-vehiculo');
+  sel.innerHTML = '<option value="">Seleccionar vehículo…</option>' +
+    allVehiculos.map(v => `<option value="${v.id}">${v.patente}${v.tipo ? ' · ' + v.tipo : ''}</option>`).join('');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
-document.getElementById('d-fecha').value = new Date().toISOString().split('T')[0];
+// ═══════════════════════════════════════════════════════════════
+// ODÓMETROS
+// ═══════════════════════════════════════════════════════════════
+let parsedRows = [];
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  document.getElementById('drop-zone').querySelector('div:nth-child(2)').textContent = '📄 ' + file.name;
+  parsedRows = [];
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    const text = await file.text();
+    const lines = text.trim().split(/\r?\n/);
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(sep).map(v => v.trim().replace(/^"|"$/g,''));
+      const row = {};
+      headers.forEach((h,j) => row[h] = vals[j] || '');
+      parsedRows.push(row);
+    }
+    populateColSelects(headers);
+  } else {
+    // Excel — usar SheetJS
+    if (!window.XLSX) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    }
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: 'array' });
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    parsedRows = data;
+    populateColSelects(Object.keys(data[0] || {}));
+  }
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function populateColSelects(headers) {
+  const opts = headers.map(h => `<option value="${h}">${h}</option>`).join('');
+  document.getElementById('col-patente').innerHTML  = opts;
+  document.getElementById('col-odometro').innerHTML = opts;
+
+  // Auto-detectar columnas comunes
+  const pGuess = headers.find(h => /patente|paten|placa|ppuu/i.test(h));
+  const oGuess = headers.find(h => /odóm|odom|km|kilo|medidor/i.test(h));
+  if (pGuess) document.getElementById('col-patente').value  = pGuess;
+  if (oGuess) document.getElementById('col-odometro').value = oGuess;
+
+  document.getElementById('col-mapper').style.display = 'block';
+  document.getElementById('preview-section').style.display = 'none';
+}
+
+function previewData() {
+  const colPat = document.getElementById('col-patente').value;
+  const colOdo = document.getElementById('col-odometro').value;
+  if (!colPat || !colOdo) { toast('Selecciona las columnas', 'error'); return; }
+
+  const patentesBD = new Set(allVehiculos.map(v => v.patente));
+  const tbody = document.getElementById('tbody-preview');
+  let encontrados = 0, noEncontrados = 0;
+
+  tbody.innerHTML = parsedRows.map(row => {
+    const pat = String(row[colPat] || '').trim().toUpperCase();
+    const odo = String(row[colOdo] || '').replace(/[^0-9]/g,'');
+    const encontrado = patentesBD.has(pat);
+    if (encontrado) encontrados++; else noEncontrados++;
+    return `<tr>
+      <td><strong>${pat}</strong></td>
+      <td>${odo ? Number(odo).toLocaleString('es-CL') + ' km' : '—'}</td>
+      <td>${encontrado
+        ? '<span class="badge badge-green">✓ Encontrado</span>'
+        : '<span class="badge badge-red">✗ No encontrado</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('preview-count').textContent = `${encontrados} coinciden · ${noEncontrados} no encontrados`;
+  document.getElementById('preview-section').style.display = 'block';
+}
+
+async function runUpdate() {
+  const colPat = document.getElementById('col-patente').value;
+  const colOdo = document.getElementById('col-odometro').value;
+  const btn    = document.getElementById('btn-update');
+  const prog   = document.getElementById('update-progress');
+  const patentesBD = new Set(allVehiculos.map(v => v.patente));
+
+  const validos = parsedRows
+    .map(row => ({
+      patente: String(row[colPat] || '').trim().toUpperCase(),
+      km: parseInt(String(row[colOdo] || '').replace(/[^0-9]/g,''))
+    }))
+    .filter(r => r.patente && !isNaN(r.km) && patentesBD.has(r.patente));
+
+  if (!validos.length) { toast('No hay filas válidas para actualizar', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Actualizando…';
+  let ok = 0, err = 0;
+
+  for (let i = 0; i < validos.length; i++) {
+    const { patente, km } = validos[i];
+    prog.textContent = `${i + 1} / ${validos.length}`;
+    const { error } = await sb.from('vehiculos').update({ odometro: km }).eq('patente', patente);
+    if (error) err++; else ok++;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⬆ Actualizar Odómetros';
+  prog.textContent = '';
+  toast(`✓ ${ok} vehículos actualizados${err ? ' · ' + err + ' errores' : ''}`, ok ? 'success' : 'error');
+  await loadVehiculos();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENTOS
+// ═══════════════════════════════════════════════════════════════
+let allDocumentos = [];
+
+function docEstado(fechaStr) {
+  if (!fechaStr) return 'sin_dato';
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(fechaStr + 'T12:00:00');
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (dias < 0)   return 'vencido';
+  if (dias <= 30) return 'proximo';
+  return 'vigente';
+}
+
+function docBadge(fechaStr) {
+  const estado = docEstado(fechaStr);
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(fechaStr + 'T12:00:00');
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (estado === 'vencido')  return { badge: '<span class="badge badge-red">🔴 Vencido</span>',  dias: dias, rowColor: 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)' };
+  if (estado === 'proximo')  return { badge: '<span class="badge badge-orange">🟠 Por Vencer</span>', dias: dias, rowColor: 'background:rgba(249,115,22,0.07);border-left:3px solid var(--orange)' };
+  return { badge: '<span class="badge badge-green">🟢 Vigente</span>', dias: dias, rowColor: 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)' };
+}
+
+async function loadDocumentos() {
+  const tbody = document.getElementById('tbody-documentos');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
+  try {
+    const { data, error } = await sb.from('documentos').select('*').order('vehiculo_patente', { ascending: true });
+    if (error) throw error;
+    allDocumentos = data || [];
+    renderDocumentos(allDocumentos);
+    updateStatsDoc();
+    populateDocCiudadFilter();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function updateStatsDoc() {
+  const vehMap = {}; allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+  const lista = (currentPerfil?.rol === 'Operador')
+    ? allDocumentos.filter(d => (vehMap[d.vehiculo_patente]?.ciudad) === currentPerfil.ciudad)
+    : allDocumentos;
+  let vigente = 0, proximo = 0, vencido = 0;
+  lista.forEach(d => {
+    const e = docEstado(d.fecha_vencimiento);
+    if (e === 'vigente') vigente++;
+    else if (e === 'proximo') proximo++;
+    else if (e === 'vencido') vencido++;
+  });
+  document.getElementById('sd-total').textContent   = lista.length;
+  document.getElementById('sd-vigente').textContent = vigente;
+  document.getElementById('sd-proximo').textContent = proximo;
+  document.getElementById('sd-vencido').textContent = vencido;
+}
+
+function renderDocumentos(list) {
+  const tbody = document.getElementById('tbody-documentos');
+  const vehMap = {};
+  allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin documentos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(d => {
+    const veh = vehMap[d.vehiculo_patente] || {};
+    const { badge, dias, rowColor } = docBadge(d.fecha_vencimiento);
+    const diasStr = dias < 0
+      ? `<span style="color:var(--red)">Hace ${Math.abs(dias)} días</span>`
+      : `${dias} días`;
+    return `<tr style="${rowColor}">
+      <td><strong>${d.vehiculo_patente || '—'}</strong></td>
+      <td>${veh.ciudad || '—'}</td>
+      <td>${d.tipo || '—'}</td>
+      <td>${fmtDate(d.fecha_vencimiento)}</td>
+      <td>${diasStr}</td>
+      <td>${badge}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.observaciones || '—'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="editDocumento(${d.id})">✏️</button>
+        ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteDocumento(${d.id})">✕</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterDocumentos() {
+  const q      = document.getElementById('search-docs').value.toLowerCase();
+  const tipo   = document.getElementById('filter-docs-tipo').value;
+  const estado = document.getElementById('filter-docs-estado').value;
+  const ciudad = document.getElementById('filter-docs-ciudad').value;
+  const vehMap = {}; allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+
+  const list = allDocumentos.filter(d => {
+    const veh = vehMap[d.vehiculo_patente] || {};
+    return (!q      || [d.vehiculo_patente, d.tipo].join(' ').toLowerCase().includes(q)) &&
+           (!tipo   || d.tipo === tipo) &&
+           (!estado || docEstado(d.fecha_vencimiento) === estado) &&
+           (!ciudad || veh.ciudad === ciudad);
+  });
+  renderDocumentos(list);
+}
+
+function populateDocCiudadFilter() {
+  const ciudades = [...new Set(allVehiculos.map(v => v.ciudad).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-docs-ciudad');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todas las ciudades</option>' +
+    ciudades.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = prev;
+}
+
+function populateDocPatenteSelect(selectedVal = '') {
+  const sel = document.getElementById('doc-patente');
+  // Filtrar vehículos por ciudad del operador, o todos si es gestor/admin
+  const vehs = (currentPerfil?.rol === 'Operador')
+    ? allVehiculos.filter(v => v.ciudad === currentPerfil.ciudad)
+    : allVehiculos;
+  const sorted = [...vehs].sort((a,b) => a.patente.localeCompare(b.patente));
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    sorted.map(v => `<option value="${v.patente}" ${v.patente === selectedVal ? 'selected' : ''}>${v.patente} · ${v.tipo || ''} · ${v.ciudad || ''}</option>`).join('');
+}
+
+function openModalDoc() {
+  document.getElementById('modal-doc-title').textContent = 'Nuevo Documento';
+  document.getElementById('doc-id').value = '';
+  document.getElementById('doc-tipo').value = '';
+  document.getElementById('doc-fecha').value = '';
+  document.getElementById('doc-obs').value = '';
+  populateDocPatenteSelect();
+  document.getElementById('modal-doc').classList.add('open');
+}
+
+function editDocumento(id) {
+  const d = allDocumentos.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('modal-doc-title').textContent = 'Editar Documento';
+  document.getElementById('doc-id').value   = d.id;
+  populateDocPatenteSelect(d.vehiculo_patente || '');
+  document.getElementById('doc-tipo').value = d.tipo || '';
+  document.getElementById('doc-fecha').value   = d.fecha_vencimiento || '';
+  document.getElementById('doc-obs').value     = d.observaciones || '';
+  document.getElementById('modal-doc').classList.add('open');
+}
+
+async function saveDocumento() {
+  const id      = document.getElementById('doc-id').value;
+  const patente = document.getElementById('doc-patente').value.trim();
+  const tipo    = document.getElementById('doc-tipo').value;
+  const fecha   = document.getElementById('doc-fecha').value;
+  if (!patente || !tipo || !fecha) { toast('Completa los campos obligatorios', 'error'); return; }
+  const payload = {
+    vehiculo_patente: patente,
+    tipo,
+    fecha_vencimiento: fecha,
+    observaciones: document.getElementById('doc-obs').value.trim() || null,
+  };
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('documentos').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('documentos').insert(payload));
+    }
+    if (error) throw error;
+    closeModal('modal-doc');
+    toast(id ? 'Documento actualizado' : 'Documento registrado');
+    await loadDocumentos();
+    reaplicarFiltroOperador();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteDocumento(id) {
+  if (!confirm('¿Eliminar este documento?')) return;
+  const { error } = await sb.from('documentos').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Documento eliminado');
+  await loadDocumentos();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORTAR EXCEL MANTENCIÓN
+// ═══════════════════════════════════════════════════════════════
+async function exportarMantExcel() {
+  // Cargar SheetJS si no está disponible
+  if (!window.XLSX) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  }
+
+  // Obtener la lista actualmente visible (respeta los filtros del usuario)
+  const q       = document.getElementById('search-mant').value.toLowerCase();
+  const tipo    = document.getElementById('filter-mant-tipo').value;
+  const ciudad  = document.getElementById('filter-ciudad-mant').value;
+  const patCiudad = {};
+  allVehiculos.forEach(v => { patCiudad[v.patente] = v; });
+
+  const list = allMantencion.filter(m => {
+    const veh = patCiudad[m.vehiculo_patente] || {};
+    return (!q      || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
+           (!tipo   || m.tipo === tipo) &&
+           (!ciudad || veh.ciudad === ciudad);
+  });
+
+  if (!list.length) { toast('No hay datos para exportar', 'error'); return; }
+
+  // Construir filas
+  const rows = list.map(m => {
+    const veh      = patCiudad[m.vehiculo_patente] || {};
+    const kmActual = parseFloat(veh.odometro) || 0;
+    const kmUltima = parseFloat(m.km_ultima) || 0;
+    const tipo     = (veh.tipo || '').toLowerCase();
+    const intervalo = (tipo === 'camion' || tipo === 'camión' || tipo === 'tracto') ? 20000 : 10000;
+    const kf       = intervalo - (kmActual - kmUltima);
+
+    let estado;
+    if (kf <= 0)        estado = 'Vencido';
+    else if (kf <= 1000) estado = 'Próximo';
+    else                 estado = 'Al día';
+
+    return {
+      'Patente':               m.vehiculo_patente || '',
+      'Ciudad':                veh.ciudad || '',
+      'Tipo Vehículo':         veh.tipo || '',
+      'Tipo Mantención':       m.tipo || '',
+      'Última Fecha':          m.fecha_ultima || '',
+      'KM Última Mantención':  kmUltima,
+      'KM Actual (Odómetro)':  kmActual,
+      'Intervalo KM':          intervalo,
+      'KM Faltante':           kf,
+      'Estado':                estado,
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Ancho de columnas
+  ws['!cols'] = [
+    {wch:12},{wch:14},{wch:14},{wch:20},{wch:14},
+    {wch:20},{wch:20},{wch:12},{wch:12},{wch:10}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Mantención');
+
+  // Nombre de archivo con fecha
+  const hoy = new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  const ciudadLabel = ciudad ? `_${ciudad}` : '_TODAS';
+  XLSX.writeFile(wb, `NTFleet_Mantencion${ciudadLabel}_${hoy}.xlsx`);
+  toast('Excel descargado correctamente');
+}
+
+// ─── START ─────────────────────────────────────────────────────
+init();
 </script>
 </body>
 </html>

@@ -450,6 +450,8 @@
   <button class="nav-btn" onclick="showTab('mantencion')">🔧 Mantención</button>
   <button class="nav-btn" onclick="showTab('ciudades')">📍 Ciudades</button>
   <button class="nav-btn" onclick="showTab('odometros')">⛽ Odómetros</button>
+  <button class="nav-btn" id="nav-taller" onclick="showTab('taller')">🔩 Taller</button>
+  <button class="nav-btn" id="nav-averias" onclick="showTab('averias')">⚠️ Averías</button>
   <button class="nav-btn" onclick="showTab('documentos')">📄 Documentos</button>
 </nav>
 
@@ -758,6 +760,106 @@
     </div>
   </div>
 
+  <!-- ═══════════════ TAB: TALLER ═══════════════ -->
+  <div id="tab-taller" class="tab">
+    <div class="page-title">
+      Taller de Mantención
+      <span class="sub">Registro de ingresos y servicios</span>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
+      <div class="stat-card"><div class="stat-label">Total Registros</div><div class="stat-value" id="st-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">Este Mes</div><div class="stat-value" id="st-mes" style="color:var(--blue)">—</div></div>
+      <div class="stat-card"><div class="stat-label">En Proceso</div><div class="stat-value" id="st-proceso" style="color:var(--orange)">—</div></div>
+      <div class="stat-card"><div class="stat-label">Completados</div><div class="stat-value" id="st-completos" style="color:var(--green)">—</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search-input" id="search-taller" type="text" placeholder="Buscar patente, mecánico…" oninput="filterTaller()" />
+      <select class="filter-sel" id="filter-taller-mec" onchange="filterTaller()">
+        <option value="">Todos los mecánicos</option>
+      </select>
+      <select class="filter-sel" id="filter-taller-estado" onchange="filterTaller()">
+        <option value="">Todos los estados</option>
+        <option value="proceso">En Proceso</option>
+        <option value="completado">Completado</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadTaller()">↺ Actualizar</button>
+      <button class="btn btn-primary ml-auto" id="btn-nuevo-taller" onclick="openModalTaller()">+ Nuevo Registro</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Folio</th>
+            <th>Patente</th>
+            <th>Ciudad</th>
+            <th>Fecha Ingreso</th>
+            <th>Fecha Egreso</th>
+            <th>KM</th>
+            <th>Mecánico</th>
+            <th>Motivo</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-taller">
+          <tr><td colspan="10" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TAB: AVERÍAS ═══════════════ -->
+  <div id="tab-averias" class="tab">
+    <div class="page-title">
+      Averías
+      <span class="sub">Registro y seguimiento de fallas</span>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
+      <div class="stat-card"><div class="stat-label">Total Averías</div><div class="stat-value" id="sa-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="sa-pendiente" style="color:var(--red)">—</div></div>
+      <div class="stat-card"><div class="stat-label">En Proceso</div><div class="stat-value" id="sa-proceso" style="color:var(--orange)">—</div></div>
+      <div class="stat-card"><div class="stat-label">Resueltas</div><div class="stat-value" id="sa-resuelto" style="color:var(--green)">—</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search-input" id="search-averias" type="text" placeholder="Buscar patente, descripción…" oninput="filterAverias()" />
+      <select class="filter-sel" id="filter-averias-estado" onchange="filterAverias()">
+        <option value="">Todos los estados</option>
+        <option value="0">Pendiente</option>
+        <option value="1">En Proceso</option>
+        <option value="2">Resuelto</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadAverias()">↺ Actualizar</button>
+      <button class="btn btn-primary ml-auto" id="btn-nuevo-averia" onclick="openModalAveria()">+ Nueva Avería</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Folio</th>
+            <th>Patente</th>
+            <th>Ciudad</th>
+            <th>Fecha Ingreso</th>
+            <th>Descripción</th>
+            <th>Sección</th>
+            <th>Mecánico</th>
+            <th>Estado</th>
+            <th>Fecha Resolución</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-averias">
+          <tr><td colspan="10" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <!-- ═══ MODAL VEHÍCULO ═══ -->
@@ -916,6 +1018,98 @@
   </div>
 </div>
 
+<!-- ═══ MODAL TALLER ═══ -->
+<div class="modal-overlay" id="modal-taller">
+  <div class="modal" style="width:600px">
+    <h3 id="modal-taller-title">Nuevo Registro Taller</h3>
+    <input type="hidden" id="taller-id" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente *</label>
+        <select id="taller-patente"></select>
+      </div>
+      <div class="form-group">
+        <label>Mecánico *</label>
+        <select id="taller-mecanico"></select>
+      </div>
+      <div class="form-group">
+        <label>Fecha Ingreso *</label>
+        <input type="date" id="taller-fecha-ingreso" />
+      </div>
+      <div class="form-group">
+        <label>Fecha Egreso</label>
+        <input type="date" id="taller-fecha-egreso" />
+      </div>
+      <div class="form-group">
+        <label>KM al Ingreso</label>
+        <input type="number" id="taller-km" placeholder="0" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Motivo Ingreso</label>
+        <input type="text" id="taller-motivo" placeholder="Mantención, Reparación…" />
+      </div>
+      <div class="form-group full">
+        <label>Observaciones</label>
+        <textarea id="taller-obs" placeholder="Detalle del trabajo realizado…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-taller')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTaller()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL AVERÍA ═══ -->
+<div class="modal-overlay" id="modal-averia">
+  <div class="modal" style="width:600px">
+    <h3 id="modal-averia-title">Nueva Avería</h3>
+    <input type="hidden" id="averia-id" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente *</label>
+        <select id="averia-patente"></select>
+      </div>
+      <div class="form-group">
+        <label>Mecánico</label>
+        <select id="averia-mecanico"></select>
+      </div>
+      <div class="form-group">
+        <label>Fecha Ingreso *</label>
+        <input type="date" id="averia-fecha-ingreso" />
+      </div>
+      <div class="form-group">
+        <label>Fecha Resolución</label>
+        <input type="date" id="averia-fecha-resolucion" />
+      </div>
+      <div class="form-group full">
+        <label>Descripción *</label>
+        <textarea id="averia-descripcion" placeholder="Descripción de la falla…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Sección</label>
+        <input type="text" id="averia-seccion" placeholder="Motor, Frenos, Eléctrico…" />
+      </div>
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="averia-estado">
+          <option value="0">Pendiente</option>
+          <option value="1">En Proceso</option>
+          <option value="2">Resuelto</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Observaciones</label>
+        <textarea id="averia-obs" placeholder="Detalle adicional…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-averia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAveria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── SUPABASE CONFIG ───────────────────────────────────────────
 const SUPABASE_URL = 'https://ahdcofcmxrfhqszevptp.supabase.co';
@@ -969,12 +1163,31 @@ async function onLogin(user) {
     document.getElementById('user-rol-badge').textContent = perfil.rol;
     document.getElementById('user-info').style.display = 'flex';
 
-    // Ocultar pestaña odómetros para Operadores
+    // Control de visibilidad de pestañas según rol
     if (perfil.rol === 'Operador') {
-      document.querySelectorAll('.nav-btn').forEach(b => {
-        if (b.textContent.includes('Odómetros')) b.style.display = 'none';
+      // Operador: no ve Odómetros, Taller ni Averías
+      ['Odómetros','Taller','Averías'].forEach(label => {
+        document.querySelectorAll('.nav-btn').forEach(b => {
+          if (b.textContent.includes(label)) b.style.display = 'none';
+        });
       });
       document.getElementById('tab-odometros').style.display = 'none';
+      document.getElementById('tab-taller').style.display = 'none';
+      document.getElementById('tab-averias').style.display = 'none';
+    } else if (perfil.rol === 'Mecánico') {
+      // Mecánico: solo ve Taller y Averías (ocultar el resto)
+      ['Vehículos','Mantención','Ciudades','Odómetros','Documentos'].forEach(label => {
+        document.querySelectorAll('.nav-btn').forEach(b => {
+          if (b.textContent.includes(label)) b.style.display = 'none';
+        });
+      });
+      ['tab-vehiculos','tab-mantencion','tab-ciudades','tab-odometros','tab-documentos'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      // Redirigir al tab de taller
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-taller').classList.add('active');
     }
   }
 
@@ -986,6 +1199,9 @@ async function onLogin(user) {
   await loadVehiculos();
   await loadMantencion();
   await loadDocumentos();
+  await loadMecanicos();
+  await loadTaller();
+  await loadAverias();
   renderCiudades();
 
   // Fijar filtro de ciudad para Operador y refiltrar tablas ya cargadas
@@ -1832,6 +2048,327 @@ async function deleteDocumento(id) {
   if (error) { toast(error.message, 'error'); return; }
   toast('Documento eliminado');
   await loadDocumentos();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// TALLER
+// ═══════════════════════════════════════════════════════════════
+let allTaller = [];
+let allMecanicos = [];
+
+async function loadMecanicos() {
+  const { data } = await sb.from('mecanicos').select('*').eq('estado','ACTIVO').order('nombre');
+  allMecanicos = data || [];
+  populateMecanicoSelects();
+}
+
+function populateMecanicoSelects() {
+  const opts = '<option value="">Sin asignar</option>' +
+    allMecanicos.map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
+  ['taller-mecanico','averia-mecanico'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+  // Filtro mecánico en toolbar
+  const filt = document.getElementById('filter-taller-mec');
+  if (filt) {
+    filt.innerHTML = '<option value="">Todos los mecánicos</option>' +
+      allMecanicos.map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
+  }
+}
+
+async function loadTaller() {
+  const tbody = document.getElementById('tbody-taller');
+  tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><span class="loader"></span></td></tr>';
+  try {
+    const { data, error } = await sb
+      .from('taller_registros')
+      .select('*')
+      .order('fecha_ingreso', { ascending: false });
+    if (error) throw error;
+    allTaller = data || [];
+    renderTaller(allTaller);
+    updateStatsTaller();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function updateStatsTaller() {
+  const hoy  = new Date();
+  const mes  = hoy.getMonth();
+  const anio = hoy.getFullYear();
+  const esteMes   = allTaller.filter(r => { const d = new Date(r.fecha_ingreso); return d.getMonth()===mes && d.getFullYear()===anio; });
+  const enProceso = allTaller.filter(r => r.fecha_ingreso && !r.fecha_egreso);
+  const completos = allTaller.filter(r => r.fecha_egreso);
+  document.getElementById('st-total').textContent   = allTaller.length;
+  document.getElementById('st-mes').textContent     = esteMes.length;
+  document.getElementById('st-proceso').textContent = enProceso.length;
+  document.getElementById('st-completos').textContent = completos.length;
+}
+
+function renderTaller(list) {
+  const tbody = document.getElementById('tbody-taller');
+  const vehMap = {}; allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Sin registros en taller</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => {
+    const veh    = vehMap[r.vehiculo_patente] || {};
+    const estado = r.fecha_egreso
+      ? '<span class="badge badge-green">✅ Completado</span>'
+      : '<span class="badge badge-orange">🔧 En Proceso</span>';
+    const canEdit = currentPerfil?.rol !== 'Operador';
+    return `<tr>
+      <td><strong>${r.folio || '—'}</strong></td>
+      <td><strong>${r.vehiculo_patente || '—'}</strong></td>
+      <td>${veh.ciudad || '—'}</td>
+      <td>${fmtDate(r.fecha_ingreso)}</td>
+      <td>${fmtDate(r.fecha_egreso)}</td>
+      <td>${fmtKm(r.km_mantencion)}</td>
+      <td>${r.mecanico || '—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.motivo_ingreso||''}">${r.motivo_ingreso || '—'}</td>
+      <td>${estado}</td>
+      <td style="display:flex;gap:6px">
+        ${canEdit ? `<button class="btn btn-sm" onclick="editTaller(${r.id})">✏️</button>` : ''}
+        ${currentPerfil?.rol === 'Administrador' ? `<button class="btn btn-danger" onclick="deleteTaller(${r.id})">✕</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTaller() {
+  const q      = document.getElementById('search-taller').value.toLowerCase();
+  const mec    = document.getElementById('filter-taller-mec').value;
+  const estado = document.getElementById('filter-taller-estado').value;
+  const list   = allTaller.filter(r => {
+    const matchQ   = !q || [r.vehiculo_patente, r.mecanico, r.motivo_ingreso].join(' ').toLowerCase().includes(q);
+    const matchMec = !mec || r.mecanico === mec;
+    const matchEst = !estado ||
+      (estado === 'proceso' && !r.fecha_egreso) ||
+      (estado === 'completado' && r.fecha_egreso);
+    return matchQ && matchMec && matchEst;
+  });
+  renderTaller(list);
+}
+
+function openModalTaller() {
+  document.getElementById('modal-taller-title').textContent = 'Nuevo Registro Taller';
+  document.getElementById('taller-id').value = '';
+  document.getElementById('taller-fecha-ingreso').value = new Date().toISOString().slice(0,10);
+  document.getElementById('taller-fecha-egreso').value = '';
+  document.getElementById('taller-km').value = '';
+  document.getElementById('taller-motivo').value = '';
+  document.getElementById('taller-obs').value = '';
+  // Poblar patentes
+  const sel = document.getElementById('taller-patente');
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+      .map(v => `<option value="${v.patente}">${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
+  document.getElementById('modal-taller').classList.add('open');
+}
+
+function editTaller(id) {
+  const r = allTaller.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('modal-taller-title').textContent = 'Editar Registro Taller';
+  document.getElementById('taller-id').value = r.id;
+  const sel = document.getElementById('taller-patente');
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+      .map(v => `<option value="${v.patente}" ${v.patente===r.vehiculo_patente?'selected':''}>${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
+  document.getElementById('taller-mecanico').value    = r.mecanico || '';
+  document.getElementById('taller-fecha-ingreso').value = r.fecha_ingreso || '';
+  document.getElementById('taller-fecha-egreso').value  = r.fecha_egreso || '';
+  document.getElementById('taller-km').value           = r.km_mantencion || '';
+  document.getElementById('taller-motivo').value       = r.motivo_ingreso || '';
+  document.getElementById('taller-obs').value          = r.observaciones || '';
+  document.getElementById('modal-taller').classList.add('open');
+}
+
+async function saveTaller() {
+  const id     = document.getElementById('taller-id').value;
+  const pat    = document.getElementById('taller-patente').value;
+  const fi     = document.getElementById('taller-fecha-ingreso').value;
+  if (!pat || !fi) { toast('Completa los campos obligatorios', 'error'); return; }
+  const payload = {
+    vehiculo_patente: pat,
+    mecanico:         document.getElementById('taller-mecanico').value || null,
+    fecha_ingreso:    fi,
+    fecha_egreso:     document.getElementById('taller-fecha-egreso').value || null,
+    km_mantencion:    parseInt(document.getElementById('taller-km').value) || null,
+    motivo_ingreso:   document.getElementById('taller-motivo').value.trim() || null,
+    observaciones:    document.getElementById('taller-obs').value.trim() || null,
+  };
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('taller_registros').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('taller_registros').insert(payload));
+    }
+    if (error) throw error;
+    closeModal('modal-taller');
+    toast(id ? 'Registro actualizado' : 'Registro creado');
+    await loadTaller();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteTaller(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  const { error } = await sb.from('taller_registros').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Registro eliminado');
+  await loadTaller();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AVERÍAS
+// ═══════════════════════════════════════════════════════════════
+let allAverias = [];
+
+async function loadAverias() {
+  const tbody = document.getElementById('tbody-averias');
+  tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><span class="loader"></span></td></tr>';
+  try {
+    const { data, error } = await sb.from('averias').select('*').order('fecha_ingreso', { ascending: false });
+    if (error) throw error;
+    allAverias = data || [];
+    renderAverias(allAverias);
+    updateStatsAverias();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function updateStatsAverias() {
+  document.getElementById('sa-total').textContent    = allAverias.length;
+  document.getElementById('sa-pendiente').textContent = allAverias.filter(a => parseInt(a.estado)===0).length;
+  document.getElementById('sa-proceso').textContent  = allAverias.filter(a => parseInt(a.estado)===1).length;
+  document.getElementById('sa-resuelto').textContent = allAverias.filter(a => parseInt(a.estado)===2).length;
+}
+
+function estadoAveriaBadge(e) {
+  const n = parseInt(e);
+  if (n===0) return '<span class="badge badge-red">🔴 Pendiente</span>';
+  if (n===1) return '<span class="badge badge-orange">🟠 En Proceso</span>';
+  return '<span class="badge badge-green">🟢 Resuelto</span>';
+}
+
+function renderAverias(list) {
+  const tbody = document.getElementById('tbody-averias');
+  const vehMap = {}; allVehiculos.forEach(v => { vehMap[v.patente] = v; });
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Sin averías registradas</td></tr>';
+    return;
+  }
+  const rowColors = ['','background:rgba(249,115,22,0.05)','background:rgba(239,68,68,0.05)'];
+  tbody.innerHTML = list.map(a => {
+    const veh = vehMap[a.vehiculo_patente] || {};
+    const est = parseInt(a.estado) || 0;
+    const rowColor = est===0 ? 'border-left:3px solid var(--red)' : est===1 ? 'border-left:3px solid var(--orange)' : '';
+    const canEdit = currentPerfil?.rol !== 'Operador';
+    return `<tr style="${rowColor}">
+      <td><strong>${a.folio || '—'}</strong></td>
+      <td><strong>${a.vehiculo_patente || '—'}</strong></td>
+      <td>${veh.ciudad || '—'}</td>
+      <td>${fmtDate(a.fecha_ingreso)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.descripcion||''}">${a.descripcion || '—'}</td>
+      <td>${a.seccion || '—'}</td>
+      <td>${a.mecanico || '—'}</td>
+      <td>${estadoAveriaBadge(a.estado)}</td>
+      <td>${fmtDate(a.fecha_realizado)}</td>
+      <td style="display:flex;gap:6px">
+        ${canEdit ? `<button class="btn btn-sm" onclick="editAveria(${a.id})">✏️</button>` : ''}
+        ${currentPerfil?.rol === 'Administrador' ? `<button class="btn btn-danger" onclick="deleteAveria(${a.id})">✕</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterAverias() {
+  const q      = document.getElementById('search-averias').value.toLowerCase();
+  const estado = document.getElementById('filter-averias-estado').value;
+  const list   = allAverias.filter(a =>
+    (!q      || [a.vehiculo_patente, a.descripcion, a.mecanico, a.seccion].join(' ').toLowerCase().includes(q)) &&
+    (!estado || String(a.estado) === estado)
+  );
+  renderAverias(list);
+}
+
+function openModalAveria() {
+  document.getElementById('modal-averia-title').textContent = 'Nueva Avería';
+  document.getElementById('averia-id').value = '';
+  document.getElementById('averia-fecha-ingreso').value = new Date().toISOString().slice(0,10);
+  document.getElementById('averia-fecha-resolucion').value = '';
+  document.getElementById('averia-descripcion').value = '';
+  document.getElementById('averia-seccion').value = '';
+  document.getElementById('averia-obs').value = '';
+  document.getElementById('averia-estado').value = '0';
+  const sel = document.getElementById('averia-patente');
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+      .map(v => `<option value="${v.patente}">${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
+  document.getElementById('modal-averia').classList.add('open');
+}
+
+function editAveria(id) {
+  const a = allAverias.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('modal-averia-title').textContent = 'Editar Avería';
+  document.getElementById('averia-id').value = a.id;
+  const sel = document.getElementById('averia-patente');
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    [...allVehiculos].sort((x,y) => x.patente.localeCompare(y.patente))
+      .map(v => `<option value="${v.patente}" ${v.patente===a.vehiculo_patente?'selected':''}>${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
+  document.getElementById('averia-mecanico').value         = a.mecanico || '';
+  document.getElementById('averia-fecha-ingreso').value    = a.fecha_ingreso || '';
+  document.getElementById('averia-fecha-resolucion').value = a.fecha_realizado || '';
+  document.getElementById('averia-descripcion').value      = a.descripcion || '';
+  document.getElementById('averia-seccion').value          = a.seccion || '';
+  document.getElementById('averia-obs').value              = a.observaciones || '';
+  document.getElementById('averia-estado').value           = String(a.estado || 0);
+  document.getElementById('modal-averia').classList.add('open');
+}
+
+async function saveAveria() {
+  const id  = document.getElementById('averia-id').value;
+  const pat = document.getElementById('averia-patente').value;
+  const fi  = document.getElementById('averia-fecha-ingreso').value;
+  const desc = document.getElementById('averia-descripcion').value.trim();
+  if (!pat || !fi || !desc) { toast('Completa los campos obligatorios', 'error'); return; }
+  const payload = {
+    vehiculo_patente: pat,
+    mecanico:         document.getElementById('averia-mecanico').value || null,
+    fecha_ingreso:    fi,
+    fecha_realizado:  document.getElementById('averia-fecha-resolucion').value || null,
+    descripcion:      desc,
+    seccion:          document.getElementById('averia-seccion').value.trim() || null,
+    observaciones:    document.getElementById('averia-obs').value.trim() || null,
+    estado:           parseInt(document.getElementById('averia-estado').value) || 0,
+  };
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('averias').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('averias').insert(payload));
+    }
+    if (error) throw error;
+    closeModal('modal-averia');
+    toast(id ? 'Avería actualizada' : 'Avería registrada');
+    await loadAverias();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteAveria(id) {
+  if (!confirm('¿Eliminar esta avería?')) return;
+  const { error } = await sb.from('averias').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Avería eliminada');
+  await loadAverias();
 }
 
 // ═══════════════════════════════════════════════════════════════

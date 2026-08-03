@@ -1275,19 +1275,35 @@ async function onLogin(user) {
       document.getElementById('tab-taller').style.display = 'none';
       document.getElementById('tab-averias').style.display = 'none';
     } else if (perfil.rol === 'Mecánico') {
-      // Mecánico: solo ve Taller y Averías (ocultar el resto)
-      ['Vehículos','Mantención','Ciudades','Odómetros','Documentos'].forEach(label => {
+      // Mecánico: ve Vehículos, Mantención, Documentos (solo ver), Taller y Averías
+      // Ocultar Ciudades y Odómetros
+      ['Ciudades','Odómetros'].forEach(label => {
         document.querySelectorAll('.nav-btn').forEach(b => {
           if (b.textContent.includes(label)) b.style.display = 'none';
         });
       });
-      ['tab-vehiculos','tab-mantencion','tab-ciudades','tab-odometros','tab-documentos'].forEach(id => {
+      ['tab-ciudades','tab-odometros'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
+      // Ocultar botones de edición y eliminación en Vehículos, Mantención y Documentos
+      document.querySelectorAll('.btn-danger, .btn-sm').forEach(b => b.style.display = 'none');
+      // Ocultar botones de nuevo registro en esas pestañas
+      ['btn-nuevo-taller'].forEach(id => {}); // Taller sí puede
+      ['btn-nuevo-averia'].forEach(id => {}); // Averías sí puede
+      // Ocultar + Nuevo en Vehículos, Mantención y Documentos
+      setTimeout(() => {
+        document.querySelectorAll('#tab-vehiculos .btn-primary, #tab-mantencion .btn-primary, #tab-documentos .btn-primary').forEach(b => b.style.display = 'none');
+        document.querySelectorAll('#tab-vehiculos .btn-ghost, #tab-mantencion .btn-ghost, #tab-documentos .btn-ghost').forEach(b => {
+          if (b.textContent.includes('Actualizar') || b.textContent.includes('↺')) return;
+          b.style.display = 'none';
+        });
+      }, 500);
       // Redirigir al tab de taller
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById('tab-taller').classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('nav-taller').classList.add('active');
     }
   }
 

@@ -453,6 +453,7 @@
   <button class="nav-btn" id="nav-taller" onclick="showTab('taller')">🔩 Taller</button>
   <button class="nav-btn" id="nav-averias" onclick="showTab('averias')">⚠️ Averías</button>
   <button class="nav-btn" onclick="showTab('documentos')">📄 Documentos</button>
+  <button class="nav-btn" id="nav-bitacora" onclick="showTab('bitacora')">🕒 Bitácora</button>
 </nav>
 
 <!-- MAIN -->
@@ -960,6 +961,49 @@
     </div>
   </div>
 
+  <!-- ═══════════════ TAB: BITÁCORA DE INGRESO ═══════════════ -->
+  <div id="tab-bitacora" class="tab">
+    <div class="page-title">
+      Bitácora de Ingreso
+      <span class="sub">Registro de accesos al sistema</span>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
+      <div class="stat-card"><div class="stat-label">Ingresos Hoy</div><div class="stat-value" id="sb-hoy">—</div></div>
+      <div class="stat-card"><div class="stat-label">Usuarios Distintos (Hoy)</div><div class="stat-value" id="sb-usuarios-hoy">—</div></div>
+      <div class="stat-card"><div class="stat-label">Total Registros</div><div class="stat-value" id="sb-total">—</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search-input" id="search-bitacora" type="text" placeholder="Buscar nombre, correo…" oninput="filterBitacora()" />
+      <select class="filter-sel" id="filter-bitacora-accion" onchange="filterBitacora()">
+        <option value="">Ingresos y salidas</option>
+        <option value="login">Solo ingresos</option>
+        <option value="logout">Solo salidas</option>
+      </select>
+      <input class="search-input" id="filter-bitacora-fecha" type="date" onchange="filterBitacora()" style="max-width:170px" />
+      <button class="btn btn-ghost" onclick="loadBitacora()">↺ Actualizar</button>
+      <button class="btn btn-ghost" onclick="exportarBitacoraExcel()">⬇ Exportar Excel</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha y Hora</th>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Correo</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-bitacora">
+          <tr><td colspan="5" class="empty-state"><span class="loader"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <!-- ═══ MODAL VEHÍCULO ═══ -->
@@ -1263,6 +1307,14 @@ async function onLogin(user) {
     document.getElementById('user-rol-badge').textContent = perfil.rol;
     document.getElementById('user-info').style.display = 'flex';
 
+    // La Bitácora de Ingreso es solo para Administrador
+    if (perfil.rol !== 'Administrador') {
+      const navBit = document.getElementById('nav-bitacora');
+      const tabBit = document.getElementById('tab-bitacora');
+      if (navBit) navBit.style.display = 'none';
+      if (tabBit) tabBit.style.display = 'none';
+    }
+
     // Control de visibilidad de pestañas según rol
     if (perfil.rol === 'Operador') {
       // Operador: no ve Odómetros, Taller ni Averías
@@ -1320,6 +1372,13 @@ async function onLogin(user) {
   await loadAverias();
   renderCiudades();
 
+  // Registrar el ingreso en la bitácora de accesos
+  registrarAcceso('login');
+  // Solo el Administrador ve el historial de accesos
+  if (perfil?.rol === 'Administrador') {
+    await loadBitacora();
+  }
+
   // Poblar selector de patentes del ingreso a taller
   populateIngresoPatentes();
   // Poblar mecánicos en selector de ingreso
@@ -1375,6 +1434,7 @@ async function doLogin() {
 }
 
 async function doLogout() {
+  await registrarAcceso('logout');
   await sb.auth.signOut();
 }
 
@@ -2777,6 +2837,119 @@ async function exportarMantExcel() {
   const hoy = new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
   const ciudadLabel = ciudad ? `_${ciudad}` : '_TODAS';
   XLSX.writeFile(wb, `NTFleet_Mantencion${ciudadLabel}_${hoy}.xlsx`);
+  toast('Excel descargado correctamente');
+}
+
+// ─── BITÁCORA DE INGRESO ───────────────────────────────────────
+let allBitacora = [];
+
+// Registra un ingreso o salida del usuario actual en la tabla bitacora_accesos
+async function registrarAcceso(accion) {
+  if (!currentUser) return;
+  try {
+    await sb.from('bitacora_accesos').insert({
+      user_id: currentUser.id,
+      nombre:  currentPerfil?.nombre || currentUser.email,
+      rol:     currentPerfil?.rol || '',
+      email:   currentUser.email,
+      accion:  accion
+    });
+  } catch (e) {
+    // No bloquea el uso de la app si falla el registro de bitácora
+    console.warn('No se pudo registrar el acceso en la bitácora:', e);
+  }
+}
+
+async function loadBitacora() {
+  const tbody = document.getElementById('tbody-bitacora');
+  if (!tbody) return;
+  const { data, error } = await sb
+    .from('bitacora_accesos')
+    .select('*')
+    .order('creado_en', { ascending: false })
+    .limit(1000);
+  if (error) {
+    console.warn('No se pudo cargar la bitácora:', error);
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No se pudo cargar la bitácora (¿permisos de Administrador?)</td></tr>`;
+    return;
+  }
+  allBitacora = data || [];
+  renderBitacoraStats();
+  filterBitacora();
+}
+
+function renderBitacoraStats() {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const deHoy = allBitacora.filter(b => (b.creado_en || '').slice(0, 10) === hoy);
+  const usuariosHoy = new Set(deHoy.map(b => b.user_id));
+  const elHoy = document.getElementById('sb-hoy');
+  const elUsuariosHoy = document.getElementById('sb-usuarios-hoy');
+  const elTotal = document.getElementById('sb-total');
+  if (elHoy) elHoy.textContent = deHoy.filter(b => b.accion === 'login').length;
+  if (elUsuariosHoy) elUsuariosHoy.textContent = usuariosHoy.size;
+  if (elTotal) elTotal.textContent = allBitacora.length;
+}
+
+function renderBitacora(list) {
+  const tbody = document.getElementById('tbody-bitacora');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Sin registros</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(b => `
+    <tr>
+      <td>${fmtDateHora(b.creado_en)}</td>
+      <td>${b.nombre || ''}</td>
+      <td>${b.rol || ''}</td>
+      <td>${b.email || ''}</td>
+      <td>${b.accion === 'login' ? '🟢 Ingreso' : '🔴 Salida'}</td>
+    </tr>`).join('');
+}
+
+function filterBitacora() {
+  const q      = (document.getElementById('search-bitacora')?.value || '').toLowerCase();
+  const accion = document.getElementById('filter-bitacora-accion')?.value || '';
+  const fecha  = document.getElementById('filter-bitacora-fecha')?.value || '';
+  const list = allBitacora.filter(b =>
+    (!q      || [b.nombre, b.email].join(' ').toLowerCase().includes(q)) &&
+    (!accion || b.accion === accion) &&
+    (!fecha  || (b.creado_en || '').slice(0, 10) === fecha)
+  );
+  renderBitacora(list);
+}
+
+function fmtDateHora(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+async function exportarBitacoraExcel() {
+  if (!window.XLSX) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  }
+  const q      = (document.getElementById('search-bitacora')?.value || '').toLowerCase();
+  const accion = document.getElementById('filter-bitacora-accion')?.value || '';
+  const fecha  = document.getElementById('filter-bitacora-fecha')?.value || '';
+  const list = allBitacora.filter(b =>
+    (!q      || [b.nombre, b.email].join(' ').toLowerCase().includes(q)) &&
+    (!accion || b.accion === accion) &&
+    (!fecha  || (b.creado_en || '').slice(0, 10) === fecha)
+  );
+  const rows = list.map(b => ({
+    'Fecha y Hora': fmtDateHora(b.creado_en),
+    'Usuario':      b.nombre || '',
+    'Rol':          b.rol || '',
+    'Correo':       b.email || '',
+    'Acción':       b.accion === 'login' ? 'Ingreso' : 'Salida'
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
+  const hoy = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `NTFleet_Bitacora_${hoy}.xlsx`);
   toast('Excel descargado correctamente');
 }
 

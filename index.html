@@ -400,6 +400,26 @@
       font-size: 12px;
       color: var(--muted);
     }
+    /* ── CELULAR (fase 1) ── */
+    .table-wrap { overflow-x: auto;
+      background: linear-gradient(to right, var(--surface) 30%, transparent) left/40px 100% no-repeat local,
+                  linear-gradient(to left, var(--surface) 30%, transparent) right/40px 100% no-repeat local,
+                  radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.55), transparent) left/12px 100% no-repeat scroll,
+                  radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.55), transparent) right/12px 100% no-repeat scroll,
+                  var(--surface); }
+    @media (max-width: 700px) {
+      header { padding: 0 14px; }
+      nav { padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+      nav::-webkit-scrollbar { display: none; }
+      .nav-btn { flex-shrink: 0; padding: 12px 12px; white-space: nowrap; }
+      main { padding: 16px 14px; }
+      .stats-grid, [style*="minmax(180px"] { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+      .stat-card { padding: 14px; }
+      .form-grid, [style*="grid-template-columns:1fr 1fr;"] { grid-template-columns: 1fr !important; }
+      [style*="grid-template-columns:1fr 1fr 1fr 1fr"], [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
+      .search-input, select.filter-sel { width: 100%; }
+      .modal { padding: 18px; width: 100%; }
+    }
   </style>
 </head>
 <body>

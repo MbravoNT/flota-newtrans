@@ -504,6 +504,10 @@
         <div class="stat-label">Inactivos</div>
         <div class="stat-value" id="s-inact" style="color:var(--red)">—</div>
       </div>
+      <div class="stat-card" style="cursor:pointer" onclick="document.getElementById('filter-clima').value='Con falla';filterVehiculos()" title="Ver móviles con climatización en falla">
+        <div class="stat-label">❄️ Clima con falla</div>
+        <div class="stat-value" id="s-clima-falla" style="color:var(--red)">—</div>
+      </div>
     </div>
 
     <!-- Toolbar -->
@@ -521,6 +525,13 @@
         <option>Operativo</option>
         <option>En mantención</option>
         <option>Inactivo</option>
+      </select>
+      <select class="filter-sel" id="filter-clima" onchange="filterVehiculos()">
+        <option value="">Climatización: todos</option>
+        <option>Operativo</option>
+        <option>Con falla</option>
+        <option>Sin equipo</option>
+        <option value="__null">Sin registrar</option>
       </select>
       <select class="filter-sel" id="filter-ciudad-veh" onchange="filterVehiculos()">
         <option value="">Todas las ciudades</option>
@@ -541,11 +552,12 @@
             <th>Ciudad</th>
             <th>Odómetro</th>
             <th>Estado</th>
+            <th>Climatización</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-vehiculos">
-          <tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>
+          <tr><td colspan="9" class="empty-state"><span class="loader"></span></td></tr>
         </tbody>
       </table>
     </div>
@@ -1079,6 +1091,19 @@
         <label>Observaciones</label>
         <textarea id="veh-obs" placeholder="Notas adicionales…"></textarea>
       </div>
+      <div class="form-group">
+        <label>❄️ Climatización</label>
+        <select id="veh-clima" onchange="toggleClimaObs()">
+          <option value="">Sin registrar</option>
+          <option>Operativo</option>
+          <option>Con falla</option>
+          <option>Sin equipo</option>
+        </select>
+      </div>
+      <div class="form-group" id="veh-clima-obs-wrap" style="display:none">
+        <label>Detalle de la falla *</label>
+        <input type="text" id="veh-clima-obs" placeholder="No enfría, compresor, fuga de gas…" />
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-veh')">Cancelar</button>
@@ -1513,6 +1538,13 @@ function fmtDate(d) {
   return new Date(d + 'T12:00:00').toLocaleDateString('es-CL');
 }
 
+function climaBadge(v) {
+  const map = { 'Operativo':'badge-green', 'Con falla':'badge-red', 'Sin equipo':'badge-muted' };
+  if (!v.clima) return '<span class="badge badge-muted">Sin registrar</span>';
+  const tip = v.clima_obs ? ` title="${String(v.clima_obs).replace(/"/g,'&quot;')}"` : '';
+  return `<span class="badge ${map[v.clima]}"${tip}>${v.clima === 'Con falla' ? '⚠️ ' : ''}${v.clima}</span>`;
+}
+
 function estadoBadge(e) {
   const map = {
     'Operativo':      'badge-green',
@@ -1526,7 +1558,7 @@ function estadoBadge(e) {
 // ═══════════════════════════════════════════════════════════════
 async function loadVehiculos() {
   const tbody = document.getElementById('tbody-vehiculos');
-  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><span class="loader"></span></td></tr>';
   try {
     const { data, error } = await sb
       .from('vehiculos')
@@ -1539,7 +1571,7 @@ async function loadVehiculos() {
     populateCiudadSelect();
     // populateVehSelect — patente libre
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
     toast(e.message, 'error');
   }
 }
@@ -1547,7 +1579,7 @@ async function loadVehiculos() {
 function renderVehiculos(list) {
   const tbody = document.getElementById('tbody-vehiculos');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin vehículos registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Sin vehículos registrados</td></tr>';
     return;
   }
   tbody.innerHTML = list.map(v => `
@@ -1559,6 +1591,7 @@ function renderVehiculos(list) {
       <td>${v.ciudad || '—'}</td>
       <td>${fmtKm(v.odometro)}</td>
       <td>${estadoBadge(v.estado)}</td>
+      <td>${climaBadge(v)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm" onclick="editVehiculo(${v.id})">✏️</button>
         ${currentPerfil?.rol === 'Operador' ? '' : `<button class="btn btn-danger" onclick="deleteVehiculo(${v.id},'${v.patente}')">✕</button>`}
@@ -1572,10 +1605,12 @@ function filterVehiculos() {
   const tipo  = document.getElementById('filter-tipo').value;
   const estado= document.getElementById('filter-estado').value;
   const ciudad = document.getElementById('filter-ciudad-veh').value;
+  const clima  = document.getElementById('filter-clima').value;
   const list  = allVehiculos.filter(v =>
     (!q      || [v.patente,v.marca,v.modelo,v.ciudad].join(' ').toLowerCase().includes(q)) &&
     (!tipo   || v.tipo === tipo) &&
     (!estado || v.estado === estado) &&
+    (!clima  || (clima === '__null' ? !v.clima : v.clima === clima)) &&
     (!ciudad || v.ciudad === ciudad)
   );
   renderVehiculos(list);
@@ -1589,6 +1624,7 @@ function updateStats() {
   document.getElementById('s-activos').textContent = lista.filter(v => v.estado === 'Operativo').length;
   document.getElementById('s-mant').textContent    = lista.filter(v => v.estado === 'En mantención').length;
   document.getElementById('s-inact').textContent   = lista.filter(v => v.estado !== 'Operativo' && v.estado !== 'En mantención').length;
+  document.getElementById('s-clima-falla').textContent = lista.filter(v => v.clima === 'Con falla').length;
 }
 
 function openModalVeh() {
@@ -1597,6 +1633,9 @@ function openModalVeh() {
   ['patente','marca','modelo','anio','km','obs'].forEach(f => document.getElementById('veh-'+f).value = '');
   document.getElementById('veh-tipo').value   = '';
   document.getElementById('veh-estado').value = '';
+  document.getElementById('veh-clima').value = '';
+  document.getElementById('veh-clima-obs').value = '';
+  toggleClimaObs();
   document.getElementById('modal-veh').classList.add('open');
 }
 
@@ -1613,7 +1652,15 @@ function editVehiculo(id) {
   document.getElementById('veh-ciudad').value  = v.ciudad || '';
   document.getElementById('veh-estado').value  = v.estado || '';
   document.getElementById('veh-obs').value     = v.observaciones || '';
+  document.getElementById('veh-clima').value     = v.clima || '';
+  document.getElementById('veh-clima-obs').value = v.clima_obs || '';
+  toggleClimaObs();
   document.getElementById('modal-veh').classList.add('open');
+}
+
+function toggleClimaObs() {
+  document.getElementById('veh-clima-obs-wrap').style.display =
+    document.getElementById('veh-clima').value === 'Con falla' ? '' : 'none';
 }
 
 async function saveVehiculo() {
@@ -1623,6 +1670,9 @@ async function saveVehiculo() {
   const estado  = document.getElementById('veh-estado').value;
 
   if (!patente || !tipo || !estado) { toast('Completa los campos obligatorios', 'error'); return; }
+  const clima    = document.getElementById('veh-clima').value || null;
+  const climaObs = document.getElementById('veh-clima-obs').value.trim();
+  if (clima === 'Con falla' && !climaObs) { toast('Describe la falla de climatización', 'error'); return; }
 
   const payload = {
     patente,
@@ -1632,6 +1682,8 @@ async function saveVehiculo() {
     odometro: parseInt(document.getElementById('veh-km').value) || 0,
     ciudad:   document.getElementById('veh-ciudad').value.trim().toUpperCase() || null,
     estado,
+    clima,
+    clima_obs: clima === 'Con falla' ? climaObs : null,
   };
 
   try {

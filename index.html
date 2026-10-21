@@ -651,24 +651,8 @@
       <div class="stat-card"><div class="stat-label">Sin registrar</div><div class="stat-value" id="cl-s-nr" style="color:var(--orange)">—</div></div>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Ciudad</th>
-            <th>Total Flota</th>
-            <th>Con equipo</th>
-            <th>Sin equipo</th>
-            <th>Operativo</th>
-            <th>Con falla</th>
-            <th>Sin registrar</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-clima-ciudades"></tbody>
-      </table>
-    </div>
 
-    <div class="toolbar" style="margin-top:20px">
+    <div class="toolbar">
       <input class="search-input" id="clima-q" type="text" placeholder="Buscar patente…" oninput="renderClimaPatentes()" />
       <select class="filter-sel" id="clima-f-ciudad" onchange="renderClimaPatentes()">
         <option value="">Todas las ciudades</option>
@@ -687,13 +671,13 @@
       <table>
         <thead>
           <tr>
+            <th>Última Actualización</th>
             <th>Patente</th>
-            <th>Tipo</th>
             <th>Ciudad</th>
             <th>Equipo</th>
             <th>Estado</th>
             <th>Observación</th>
-            <th>Actualizado</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-clima-patentes"></tbody>
@@ -2041,40 +2025,13 @@ function renderClima() {
   document.getElementById('cl-s-sin').textContent   = cuenta(v => v.clima_equipo === 'Sin equipo');
   document.getElementById('cl-s-nr').textContent    = cuenta(v => climaEstadoDe(v) === '__nr');
 
-  const porCiudad = {};
-  lista.forEach(v => {
-    const c = v.ciudad || 'SIN CIUDAD';
-    const k = porCiudad[c] ||= { total:0, con:0, sin:0, op:0, falla:0, nr:0 };
-    k.total++;
-    if (v.clima_equipo === 'Con equipo') k.con++;
-    const e = climaEstadoDe(v);
-    if (e === 'Sin equipo') k.sin++; else if (e === 'Operativo') k.op++; else if (e === 'Con falla') k.falla++; else k.nr++;
-  });
-  const ciudades = Object.keys(porCiudad).sort();
-  document.getElementById('tbody-clima-ciudades').innerHTML = ciudades.length ? ciudades.map(c => {
-    const k = porCiudad[c];
-    return `<tr style="cursor:pointer" onclick="filtrarClimaCiudad('${escHtml(c)}')" title="Ver patentes de ${escHtml(c)}">
-      <td><strong>${escHtml(c)}</strong></td>
-      <td>${k.total}</td>
-      <td>${k.con}</td>
-      <td><span class="badge badge-muted">${k.sin}</span></td>
-      <td><span class="badge badge-green">${k.op}</span></td>
-      <td><span class="badge badge-red">${k.falla}</span></td>
-      <td><span class="badge badge-orange">${k.nr}</span></td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="7" class="empty-state">Sin vehículos</td></tr>';
-
+  const ciudades = [...new Set(lista.map(v => v.ciudad).filter(Boolean))].sort();
   const sel = document.getElementById('clima-f-ciudad');
   const prev = sel.value;
   sel.innerHTML = '<option value="">Todas las ciudades</option>' + ciudades.map(c => `<option>${escHtml(c)}</option>`).join('');
   sel.value = prev;
+  if (currentPerfil?.rol === 'Operador') { sel.value = currentPerfil.ciudad; sel.disabled = true; }
   renderClimaPatentes();
-}
-
-function filtrarClimaCiudad(c) {
-  document.getElementById('clima-f-ciudad').value = c;
-  renderClimaPatentes();
-  document.getElementById('tbody-clima-patentes').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderClimaPatentes() {
@@ -2083,20 +2040,23 @@ function renderClimaPatentes() {
   const estado = document.getElementById('clima-f-estado').value;
   const lista = climaVisibles().filter(v =>
     (!q      || (v.patente || '').includes(q)) &&
-    (!ciudad || (v.ciudad || 'SIN CIUDAD') === ciudad) &&
+    (!ciudad || v.ciudad === ciudad) &&
     (!estado || climaEstadoDe(v) === estado)
   );
   const badgeEstado = { 'Operativo':'badge-green', 'Con falla':'badge-red' };
   document.getElementById('tbody-clima-patentes').innerHTML = lista.length ? lista.map(v => {
     const e = climaEstadoDe(v);
-    return `<tr>
-      <td><a href="#" onclick="openClima('${escHtml(v.patente)}');return false" style="color:var(--accent,inherit);font-weight:700">${escHtml(v.patente)}</a></td>
-      <td>${escHtml(v.tipo) || '—'}</td>
+    const fila = e === 'Con falla' ? 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)'
+               : e === 'Operativo' ? 'background:rgba(34,197,94,0.04);border-left:3px solid var(--green)'
+               : e === '__nr' ? 'border-left:3px solid var(--orange)' : '';
+    return `<tr style="${fila}">
+      <td style="font-size:12px">${v.clima_fecha ? fmtDateHora(v.clima_fecha) + (v.clima_usuario ? '<br><span style="color:var(--muted)">' + escHtml(v.clima_usuario) + '</span>' : '') : '—'}</td>
+      <td><strong>${escHtml(v.patente)}</strong></td>
       <td>${escHtml(v.ciudad) || '—'}</td>
       <td>${v.clima_equipo ? escHtml(v.clima_equipo) : '<span class="badge badge-orange">Sin registrar</span>'}</td>
-      <td>${e === 'Operativo' || e === 'Con falla' ? `<span class="badge ${badgeEstado[e]}">${e === 'Con falla' ? '⚠️ ' : ''}${e}</span>` : '—'}</td>
+      <td>${e === 'Operativo' || e === 'Con falla' ? `<span class="badge ${badgeEstado[e]}">${e === 'Con falla' ? '🔴 ' : '🟢 '}${e}</span>` : '—'}</td>
       <td style="max-width:280px">${escHtml(v.clima_obs) || '—'}</td>
-      <td style="font-size:12px;color:var(--muted)">${v.clima_fecha ? fmtDateHora(v.clima_fecha) + (v.clima_usuario ? '<br>' + escHtml(v.clima_usuario) : '') : '—'}</td>
+      <td><button class="btn btn-sm" onclick="openClima('${escHtml(v.patente)}')" title="Actualizar climatización">✏️</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="7" class="empty-state">Sin patentes para el filtro</td></tr>';
 }

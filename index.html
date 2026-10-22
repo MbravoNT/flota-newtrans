@@ -842,6 +842,7 @@
     <!-- Sub-tabs taller -->
     <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);">
       <button class="nav-btn active" id="subtab-btn-ingreso" onclick="showSubTab('ingreso')" style="font-size:13px">📋 Ingreso a Taller</button>
+      <button class="nav-btn" id="subtab-btn-salida" onclick="showSubTab('salida');cargarSalidaPatentes()" style="font-size:13px">🚪 Salida del Taller</button>
       <button class="nav-btn" id="subtab-btn-historial" onclick="showSubTab('historial')" style="font-size:13px">📂 Historial</button>
     </div>
 
@@ -940,6 +941,58 @@
           <button class="btn btn-ghost" onclick="limpiarIngreso()">↺ Limpiar</button>
           <button class="btn btn-ghost" onclick="imprimirFicha(document.getElementById('ingreso-patente').value)">📄 Ver Ficha</button>
           <button class="btn btn-primary" id="btn-grabar-ingreso" onclick="grabarIngreso()">✅ Ingresar a Taller e Imprime Ficha</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-TAB: SALIDA -->
+    <div id="subtab-salida" style="display:none;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;">
+        <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:16px;color:var(--accent)">Salida del Taller</div>
+        <div style="display:grid;grid-template-columns:2fr 2fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label>Patente del Vehículo * <span style="color:var(--muted);font-weight:400">(vehículos en taller)</span></label>
+            <select id="salida-patente" onchange="cargarSalida()"></select>
+          </div>
+          <div class="form-group">
+            <label>Mecánico *</label>
+            <select id="salida-mecanico"></select>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Salida *</label>
+            <input type="date" id="salida-fecha" />
+          </div>
+        </div>
+        <div id="salida-info" style="display:none;margin-top:8px;font-size:13px;color:var(--muted)"></div>
+      </div>
+
+      <div id="salida-container" style="display:none;">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+            <div style="padding:12px 16px;font-family:var(--font-head);font-weight:700;font-size:14px;border-bottom:1px solid var(--border)">Check de Mantenciones Realizadas</div>
+            <div style="max-height:460px;overflow-y:auto">
+              <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:var(--surface2);">
+                  <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase">Sección Mantención</th>
+                  <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase">Descripción Mantención</th>
+                  <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase">Realizado</th>
+                </tr></thead>
+                <tbody id="tbody-salida"></tbody>
+              </table>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="form-group">
+              <label>Agregar Mantención Preventiva</label>
+              <select id="salida-preventiva"></select>
+            </div>
+            <button class="btn btn-ghost" onclick="agregarPreventivaSalida()">➕ Agregar a las Mantenciones</button>
+            <div class="form-group">
+              <label>Observaciones</label>
+              <textarea id="salida-obs" rows="8" placeholder="Trabajos realizados, repuestos, hallazgos…"></textarea>
+            </div>
+            <button class="btn btn-primary" id="btn-grabar-salida" onclick="grabarSalida()">✅ Grabar Salida del Vehículo</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2492,7 +2545,7 @@ async function loadTiposMantencion() {
 }
 
 function showSubTab(name) {
-  ['ingreso','historial'].forEach(n => {
+  ['ingreso','salida','historial'].forEach(n => {
     document.getElementById('subtab-' + n).style.display = n === name ? 'block' : 'none';
     const btn = document.getElementById('subtab-btn-' + n);
     if (btn) btn.classList.toggle('active', n === name);
@@ -2716,6 +2769,108 @@ async function imprimirFicha(pat, nuevo) {
     ${folios.length ? '' : '<p>Sin mantenciones registradas en los últimos ' + MESES_FICHA + ' meses.</p>'}
   </body></html>`);
   win.document.close();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SALIDA DEL TALLER
+// Lista los ítems pendientes del folio abierto (premarcados), permite agregar
+// preventivas y graba el desglose: esas marcas son las "X" del Informe de Mantención.
+// ═══════════════════════════════════════════════════════════════
+let salidaFolio = null;   // registro abierto del vehículo seleccionado
+let salidaItems = [];     // ítems del vehículo, con flag en_lista / marcado
+
+async function cargarSalidaPatentes() {
+  await loadTiposMantencion();
+  const { data } = await sb.from('taller_registros')
+    .select('id, folio, vehiculo_patente, fecha_ingreso, km_mantencion')
+    .is('fecha_egreso', null).not('folio', 'is', null).order('fecha_ingreso', { ascending: false });
+  const abiertos = data || [];
+  const sel = document.getElementById('salida-patente');
+  sel.innerHTML = `<option value="">${abiertos.length ? 'Seleccionar vehículo en taller…' : 'No hay vehículos en taller'}</option>` +
+    abiertos.map(r => `<option value="${r.folio}">${escHtml(r.vehiculo_patente)} · Folio ${r.folio} · ingreso ${fmtDate(r.fecha_ingreso)}</option>`).join('');
+  sel._abiertos = abiertos;
+  document.getElementById('salida-mecanico').innerHTML = '<option value="">Seleccionar mecánico…</option>' +
+    allMecanicos.map(m => `<option value="${escHtml(m.nombre)}">${escHtml(m.nombre)}</option>`).join('');
+  document.getElementById('salida-fecha').value = new Date().toLocaleDateString('en-CA');
+  document.getElementById('salida-container').style.display = 'none';
+  document.getElementById('salida-info').style.display = 'none';
+}
+
+async function cargarSalida() {
+  const sel = document.getElementById('salida-patente');
+  salidaFolio = (sel._abiertos || []).find(r => String(r.folio) === sel.value) || null;
+  if (!salidaFolio) { document.getElementById('salida-container').style.display = 'none'; return; }
+  const pat = salidaFolio.vehiculo_patente;
+  const veh = allVehiculos.find(v => v.patente === pat);
+  await cargarDesgloseVehiculo(pat);
+  const { pendientes } = calcularItemsIngreso(itemsDeVehiculo(veh), desgloseCache[pat] || {}, Number(salidaFolio.km_mantencion) || 0);
+  const pend = new Set(pendientes.map(p => p.codigo));
+  salidaItems = itemsDeVehiculo(veh).map(it => ({ ...it, en_lista: pend.has(it.codigo), marcado: pend.has(it.codigo) }));
+  const info = document.getElementById('salida-info');
+  info.style.display = 'block';
+  info.textContent = `${veh?.tipo_taller || veh?.tipo || ''} · ${veh?.marca || ''} ${veh?.modelo || ''} · Ingreso ${fmtDate(salidaFolio.fecha_ingreso)} · ${fmtKm(salidaFolio.km_mantencion)}`;
+  document.getElementById('salida-obs').value = '';
+  renderSalida();
+  document.getElementById('salida-container').style.display = 'block';
+}
+
+function renderSalida() {
+  const lista = salidaItems.filter(i => i.en_lista);
+  document.getElementById('tbody-salida').innerHTML = lista.length ? lista.map(i => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 12px;font-size:12px;color:var(--muted)">${escHtml(i.seccion)}</td>
+      <td style="padding:6px 12px;font-size:13px">${escHtml(i.nombre)}</td>
+      <td style="padding:6px 12px;text-align:center"><input type="checkbox" ${i.marcado ? 'checked' : ''}
+        onchange="salidaItems.find(x => x.codigo === '${i.codigo}').marcado = this.checked" style="width:18px;height:18px"></td>
+    </tr>`).join('') : '<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Sin mantenciones pendientes. Agregue preventivas si corresponde.</td></tr>';
+  document.getElementById('salida-preventiva').innerHTML = '<option value="">Seleccionar…</option>' +
+    salidaItems.filter(i => !i.en_lista).map(i => `<option value="${i.codigo}">${escHtml(i.nombre)}</option>`).join('');
+}
+
+function agregarPreventivaSalida() {
+  const cod = document.getElementById('salida-preventiva').value;
+  const it = salidaItems.find(i => i.codigo === cod);
+  if (!it) return;
+  it.en_lista = true; it.marcado = true;
+  renderSalida();
+}
+
+async function grabarSalida() {
+  const mec = document.getElementById('salida-mecanico').value;
+  const fecha = document.getElementById('salida-fecha').value;
+  const hoy = new Date().toLocaleDateString('en-CA');
+  if (!salidaFolio) { toast('Selecciona un vehículo en taller', 'error'); return; }
+  if (!mec || !fecha) { toast('Completa mecánico y fecha de salida', 'error'); return; }
+  if (fecha > hoy) { toast('La fecha de salida no puede ser futura', 'error'); return; }
+  if (fecha < salidaFolio.fecha_ingreso) { toast('La fecha de salida es anterior al ingreso', 'error'); return; }
+  if (!salidaItems.some(i => i.marcado) && !confirm('No hay mantenciones marcadas como realizadas. ¿Grabar la salida igual?')) return;
+
+  const btn = document.getElementById('btn-grabar-salida');
+  btn.disabled = true;
+  try {
+    const { count } = await sb.from('taller_desglose').select('id', { count: 'exact', head: true }).eq('folio', salidaFolio.folio);
+    if (count) throw new Error(`El folio ${salidaFolio.folio} ya tiene mantenciones registradas`);
+    const km = Number(salidaFolio.km_mantencion) || 0, prev = desgloseCache[salidaFolio.vehiculo_patente] || {};
+    // Igual que el legacy: una fila por ítem del vehículo; si no se realizó, conserva el km de su última realización
+    const filas = salidaItems.map(i => ({
+      folio: salidaFolio.folio, codigo_mantencion: i.codigo, realizado: i.marcado,
+      km_realizado: i.marcado ? km : (prev[i.codigo]?.km_realizado ?? null),
+      fecha_realizado: i.marcado ? fecha : null,
+    }));
+    const { error: eD } = await sb.from('taller_desglose').insert(filas);
+    if (eD) throw eD;
+    const { error: eR } = await sb.from('taller_registros').update({
+      fecha_egreso: fecha, mecanico: mec, observaciones: document.getElementById('salida-obs').value.trim(),
+    }).eq('id', salidaFolio.id);
+    if (eR) throw eR;
+    toast(`✅ Salida registrada — ${salidaFolio.vehiculo_patente} · Folio ${salidaFolio.folio}`);
+    await cargarSalidaPatentes();
+    await loadTaller();
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

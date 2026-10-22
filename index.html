@@ -870,23 +870,28 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Mecánico *</label>
-            <select id="ingreso-mecanico"></select>
+            <label>Fecha de Ingreso *</label>
+            <input type="date" id="ingreso-fecha" />
           </div>
         </div>
 
         <!-- Info vehículo -->
         <div id="ficha-vehiculo" style="display:none;background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:16px;">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:13px;">
-            <div><span style="color:var(--muted)">Tipo:</span> <strong id="fv-tipo">—</strong></div>
-            <div><span style="color:var(--muted)">Modelo:</span> <strong id="fv-modelo">—</strong></div>
-            <div><span style="color:var(--muted)">Año:</span> <strong id="fv-anio">—</strong></div>
-            <div><span style="color:var(--muted)">Ciudad:</span> <strong id="fv-ciudad">—</strong></div>
+            <div><span style="color:var(--muted)">Tipo de Vehículo:</span> <strong id="fv-tipo">—</strong></div>
             <div><span style="color:var(--muted)">Último Ingreso:</span> <strong id="fv-ultimo-ingreso">—</strong></div>
-            <div><span style="color:var(--muted)">KM Último Ingreso:</span> <strong id="fv-ultimo-km">—</strong></div>
-            <div><span style="color:var(--muted)">KM Actual BD:</span> <strong id="fv-odometro">—</strong></div>
+            <div><span style="color:var(--muted)">Año:</span> <strong id="fv-anio">—</strong></div>
+            <div><span style="color:var(--muted)">Km Último Ingreso:</span> <strong id="fv-ultimo-km">—</strong></div>
+            <div><span style="color:var(--muted)">Marca:</span> <strong id="fv-marca">—</strong></div>
+            <div><span style="color:var(--muted)">Prox. Rev. Técnica:</span> <strong id="fv-revtec">—</strong></div>
+            <div><span style="color:var(--muted)">Modelo:</span> <strong id="fv-modelo">—</strong></div>
             <div><span style="color:var(--muted)">Estado:</span> <strong id="fv-estado">—</strong></div>
+            <div><span style="color:var(--muted)">Combustible:</span> <strong id="fv-combustible">—</strong></div>
+            <div><span style="color:var(--muted)">Área Responsable:</span> <strong id="fv-area">—</strong></div>
+            <div><span style="color:var(--muted)">Ciudad:</span> <strong id="fv-ciudad">—</strong></div>
+            <div><span style="color:var(--muted)">KM Actual BD:</span> <strong id="fv-odometro">—</strong></div>
           </div>
+          <div id="fv-alerta" style="display:none;margin-top:10px;font-size:13px;color:var(--red);font-weight:600"></div>
         </div>
       </div>
 
@@ -933,7 +938,8 @@
 
         <div style="display:flex;gap:10px;justify-content:flex-end;">
           <button class="btn btn-ghost" onclick="limpiarIngreso()">↺ Limpiar</button>
-          <button class="btn btn-primary" onclick="grabarIngreso()">✅ Ingresar a Taller</button>
+          <button class="btn btn-ghost" onclick="imprimirFicha(document.getElementById('ingreso-patente').value)">📄 Ver Ficha</button>
+          <button class="btn btn-primary" id="btn-grabar-ingreso" onclick="grabarIngreso()">✅ Ingresar a Taller e Imprime Ficha</button>
         </div>
       </div>
     </div>
@@ -1486,12 +1492,6 @@ async function onLogin(user) {
 
   // Poblar selector de patentes del ingreso a taller
   populateIngresoPatentes();
-  // Poblar mecánicos en selector de ingreso
-  const selMecIngreso = document.getElementById('ingreso-mecanico');
-  if (selMecIngreso) {
-    selMecIngreso.innerHTML = '<option value="">Sin asignar</option>' +
-      allMecanicos.map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
-  }
 
   // Fijar filtro de ciudad para Operador y refiltrar tablas ya cargadas
   if (perfil?.rol === 'Operador') {
@@ -2462,18 +2462,33 @@ async function deleteDocumento(id) {
 let desgloseCache = {}; // cache por patente: {cod_mant: {km_realizado, realizado}}
 let tiposMantencion = []; // lista de tipos del checklist
 
-// Intervalos por tipo de mantención (en km)
-// Basado en la lógica del Access: intervalo general 10.000 km camioneta, 20.000 camión
-// Para ítems específicos usamos el intervalo del vehículo
-function getIntervaloPorTipo(tipoVehiculo) {
-  const t = (tipoVehiculo || '').toLowerCase();
-  return (t === 'camion' || t === 'camión' || t === 'tracto') ? 20000 : 10000;
+// Intervalos por tipo de taller (tabla taller_intervalos, migrada del Access).
+// Fallback para vehículos sin tipo_taller: camión/tracto → CAMION RUTA, resto → CAMIONETA.
+let intervalosTaller = []; // [{tipo_taller, codigo_mantencion, intervalo_km}]
+const MESES_FICHA = 12;    // la ficha muestra 12 meses; la base guarda todo el historial
+
+function tipoTallerDe(veh) {
+  if (veh?.tipo_taller) return veh.tipo_taller;
+  const t = (veh?.tipo || '').toLowerCase();
+  return (t === 'camion' || t === 'camión' || t === 'tracto') ? 'CAMION RUTA' : 'CAMIONETA';
+}
+
+// Ítems que aplican al tipo del vehículo, en el orden de la ficha legacy
+function itemsDeVehiculo(veh) {
+  const tt = tipoTallerDe(veh);
+  const km = {};
+  intervalosTaller.filter(i => i.tipo_taller === tt).forEach(i => { km[i.codigo_mantencion] = i.intervalo_km; });
+  return tiposMantencion.filter(t => t.codigo in km).map(t => ({ ...t, intervalo: km[t.codigo] }));
 }
 
 async function loadTiposMantencion() {
   if (tiposMantencion.length > 0) return;
-  const { data } = await sb.from('taller_tipos_mantencion').select('*').order('codigo');
-  tiposMantencion = data || [];
+  const [{ data: tipos }, { data: ints }] = await Promise.all([
+    sb.from('taller_tipos_mantencion').select('*').order('orden'),
+    sb.from('taller_intervalos').select('*'),
+  ]);
+  tiposMantencion  = tipos || [];
+  intervalosTaller = ints || [];
 }
 
 function showSubTab(name) {
@@ -2489,8 +2504,12 @@ function populateIngresoPatentes() {
   if (!sel) return;
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
     [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
-      .map(v => `<option value="${v.patente}">${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
+      .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo||'')} · ${escHtml(v.ciudad||'')}</option>`).join('');
+  const f = document.getElementById('ingreso-fecha');
+  if (f && !f.value) f.value = new Date().toLocaleDateString('en-CA');
 }
+
+let ultimoIngreso = null; // {folio, fecha_ingreso, fecha_egreso, km_mantencion} del vehículo seleccionado
 
 async function cargarFichaVehiculo() {
   const pat = document.getElementById('ingreso-patente').value;
@@ -2499,131 +2518,95 @@ async function cargarFichaVehiculo() {
     document.getElementById('checklist-container').style.display = 'none';
     return;
   }
+  const veh = allVehiculos.find(v => v.patente === pat) || {};
+  const set = (id, v) => { document.getElementById(id).textContent = v || '—'; };
+  set('fv-tipo', veh.tipo_taller || veh.tipo);
+  set('fv-anio', veh.anio);
+  set('fv-marca', veh.marca);
+  set('fv-modelo', veh.modelo);
+  set('fv-combustible', veh.combustible);
+  set('fv-area', veh.area_responsable);
+  set('fv-ciudad', veh.ciudad);
+  set('fv-estado', veh.estado);
+  document.getElementById('fv-odometro').textContent = fmtKm(veh.odometro);
 
-  const veh = allVehiculos.find(v => v.patente === pat);
-  if (veh) {
-    document.getElementById('fv-tipo').textContent    = veh.tipo || '—';
-    document.getElementById('fv-modelo').textContent  = veh.modelo || '—';
-    document.getElementById('fv-anio').textContent    = veh.anio || '—';
-    document.getElementById('fv-ciudad').textContent  = veh.ciudad || '—';
-    document.getElementById('fv-odometro').textContent = fmtKm(veh.odometro);
-    document.getElementById('fv-estado').textContent  = veh.estado || '—';
-    // Autocompletar KM con odómetro actual
-    if (!document.getElementById('ingreso-km').value) {
-      document.getElementById('ingreso-km').value = veh.odometro || '';
-    }
-  }
+  const rt = allDocumentos.filter(d => d.vehiculo_patente === pat && d.tipo === 'Revisión Técnica')
+    .sort((a,b) => (b.fecha_vencimiento||'').localeCompare(a.fecha_vencimiento||''))[0];
+  const rtVencida = rt && rt.fecha_vencimiento < new Date().toLocaleDateString('en-CA');
+  document.getElementById('fv-revtec').innerHTML = rt
+    ? `${fmtDate(rt.fecha_vencimiento)}${rtVencida ? ' <span style="color:var(--red)">⚠ VENCIDA</span>' : ''}` : '—';
 
-  // Cargar último ingreso al taller
-  const { data: ultimoReg } = await sb.from('taller_registros')
-    .select('fecha_ingreso, km_mantencion')
+  const { data } = await sb.from('taller_registros')
+    .select('folio, fecha_ingreso, fecha_egreso, km_mantencion')
     .eq('vehiculo_patente', pat)
-    .order('fecha_ingreso', { ascending: false })
+    .order('fecha_ingreso', { ascending: false }).order('folio', { ascending: false })
     .limit(1);
-  if (ultimoReg && ultimoReg.length > 0) {
-    document.getElementById('fv-ultimo-ingreso').textContent = fmtDate(ultimoReg[0].fecha_ingreso);
-    document.getElementById('fv-ultimo-km').textContent = fmtKm(ultimoReg[0].km_mantencion);
-  } else {
-    document.getElementById('fv-ultimo-ingreso').textContent = 'Sin registros';
-    document.getElementById('fv-ultimo-km').textContent = '—';
-  }
+  ultimoIngreso = data?.[0] || null;
+  document.getElementById('fv-ultimo-ingreso').textContent = ultimoIngreso ? fmtDate(ultimoIngreso.fecha_ingreso) : 'Sin registros';
+  document.getElementById('fv-ultimo-km').textContent = ultimoIngreso ? fmtKm(ultimoIngreso.km_mantencion) : '—';
 
+  const alerta = document.getElementById('fv-alerta');
+  const abierto = ultimoIngreso && !ultimoIngreso.fecha_egreso;
+  alerta.style.display = abierto ? 'block' : 'none';
+  alerta.textContent = abierto ? `⚠ El vehículo ya está en taller (folio ${ultimoIngreso.folio}, sin salida registrada). Registre la salida antes de un nuevo ingreso.` : '';
+  document.getElementById('btn-grabar-ingreso').disabled = !!abierto;
+
+  if (!document.getElementById('ingreso-km').value) document.getElementById('ingreso-km').value = veh.odometro || '';
   document.getElementById('ficha-vehiculo').style.display = 'block';
 
-  // Cargar desglose del último folio de este vehículo
   await cargarDesgloseVehiculo(pat);
   calcularChecklistIngreso();
 }
 
+// El desglose del último folio guarda, por ítem, el km de la última vez que se realizó
+// (el legacy arrastra ese dato folio a folio), así que basta con leer el último folio.
 async function cargarDesgloseVehiculo(pat) {
-  // Obtener el folio más reciente de este vehículo
-  const { data: folios } = await sb.from('taller_registros')
-    .select('folio')
-    .eq('vehiculo_patente', pat)
-    .order('fecha_ingreso', { ascending: false })
-    .limit(1);
-
-  if (!folios || folios.length === 0) {
-    desgloseCache[pat] = {};
-    return;
-  }
-
-  const folio = folios[0].folio;
-  const { data: des } = await sb.from('taller_desglose')
-    .select('*')
-    .eq('folio', folio);
-
-  const mapa = {};
+  desgloseCache[pat] = {};
+  if (!ultimoIngreso) return;
+  const { data: des } = await sb.from('taller_desglose').select('*').eq('folio', ultimoIngreso.folio);
   (des || []).forEach(d => {
-    mapa[d.codigo_mantencion] = {
-      km_realizado: parseFloat(d.km_realizado) || 0,
-      realizado: d.realizado
-    };
+    desgloseCache[pat][d.codigo_mantencion] = { km_realizado: parseFloat(d.km_realizado) || 0, realizado: d.realizado };
   });
-  desgloseCache[pat] = mapa;
+}
+
+// Regla legacy: KM pasados = km actual − km última realización − intervalo.
+// > 0 → pendiente; intervalo 0 → se revisa en cada ingreso; resto → preventiva con su km próximo.
+function calcularItemsIngreso(items, desglose, kmActual) {
+  const pendientes = [], preventivas = [];
+  items.forEach(it => {
+    const kmUlt = desglose[it.codigo]?.km_realizado || 0;
+    const kmProximo = kmUlt + it.intervalo;
+    if (it.intervalo === 0) pendientes.push({ ...it, kmPasados: 0 });
+    else if (kmActual > kmProximo) pendientes.push({ ...it, kmPasados: kmActual - kmProximo });
+    else preventivas.push({ ...it, kmProximo });
+  });
+  pendientes.sort((a,b) => b.kmPasados - a.kmPasados);
+  preventivas.sort((a,b) => a.kmProximo - b.kmProximo);
+  return { pendientes, preventivas };
 }
 
 async function calcularChecklistIngreso() {
   const pat   = document.getElementById('ingreso-patente').value;
   const kmStr = document.getElementById('ingreso-km').value;
   if (!pat || !kmStr) return;
-
-  const kmActual  = parseFloat(kmStr) || 0;
-  const veh       = allVehiculos.find(v => v.patente === pat);
-  const intervalo = getIntervaloPorTipo(veh?.tipo);
-
   await loadTiposMantencion();
-  const desglose  = desgloseCache[pat] || {};
+  const veh = allVehiculos.find(v => v.patente === pat);
+  const { pendientes, preventivas } = calcularItemsIngreso(itemsDeVehiculo(veh), desgloseCache[pat] || {}, parseFloat(kmStr) || 0);
 
-  const pendientes  = [];
-  const preventivas = [];
-
-  tiposMantencion.forEach(tipo => {
-    const d = desglose[tipo.codigo];
-    const kmUltimo = d ? d.km_realizado : 0;
-    const kmPasados = kmActual - kmUltimo;
-    const kmProximo = kmUltimo + intervalo;
-    const kmFaltante = kmProximo - kmActual;
-
-    if (kmPasados > intervalo) {
-      // Pendiente: ya superó el intervalo
-      pendientes.push({ nombre: tipo.nom_mantencion, seccion: tipo.seccion, kmPasados: Math.round(kmPasados - intervalo) });
-    } else if (kmFaltante <= intervalo * 0.2) {
-      // Preventiva próxima: dentro del 20% del intervalo (últimos 2.000 km de 10.000 o 4.000 de 20.000)
-      preventivas.push({ nombre: tipo.nom_mantencion, seccion: tipo.seccion, kmProximo: Math.round(kmProximo) });
-    }
-  });
-
-  // Renderizar pendientes
-  const tbodyP = document.getElementById('tbody-pendientes');
-  if (pendientes.length === 0) {
-    tbodyP.innerHTML = '<tr><td colspan="2" style="padding:16px;text-align:center;color:var(--green)">✅ Sin mantenciones pendientes</td></tr>';
-  } else {
-    tbodyP.innerHTML = pendientes.map(p => `
+  const fila = (p, valor, color) => `
       <tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 12px;font-size:13px">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">${p.seccion}</div>
-          ${p.nombre}
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">${escHtml(p.seccion)}</div>
+          ${escHtml(p.nombre)}
         </td>
-        <td style="padding:8px 12px;text-align:right;color:var(--red);font-weight:600;font-size:13px">+${p.kmPasados.toLocaleString('es-CL')} km</td>
-      </tr>`).join('');
-  }
-
-  // Renderizar preventivas
-  const tbodyV = document.getElementById('tbody-preventivas');
-  if (preventivas.length === 0) {
-    tbodyV.innerHTML = '<tr><td colspan="2" style="padding:16px;text-align:center;color:var(--muted)">Sin mantenciones preventivas próximas</td></tr>';
-  } else {
-    tbodyV.innerHTML = preventivas.map(p => `
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 12px;font-size:13px">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">${p.seccion}</div>
-          ${p.nombre}
-        </td>
-        <td style="padding:8px 12px;text-align:right;color:var(--green);font-weight:600;font-size:13px">${p.kmProximo.toLocaleString('es-CL')} km</td>
-      </tr>`).join('');
-  }
-
+        <td style="padding:8px 12px;text-align:right;color:${color};font-weight:600;font-size:13px">${valor}</td>
+      </tr>`;
+  document.getElementById('tbody-pendientes').innerHTML = pendientes.length
+    ? pendientes.map(p => fila(p, p.intervalo === 0 ? 'Cada ingreso' : '+' + p.kmPasados.toLocaleString('es-CL') + ' km', 'var(--red)')).join('')
+    : '<tr><td colspan="2" style="padding:16px;text-align:center;color:var(--green)">✅ Sin mantenciones pendientes</td></tr>';
+  document.getElementById('tbody-preventivas').innerHTML = preventivas.length
+    ? preventivas.map(p => fila(p, p.kmProximo.toLocaleString('es-CL') + ' km', 'var(--green)')).join('')
+    : '<tr><td colspan="2" style="padding:16px;text-align:center;color:var(--muted)">Sin mantenciones preventivas</td></tr>';
   document.getElementById('checklist-container').style.display = 'block';
 }
 
@@ -2631,41 +2614,102 @@ function limpiarIngreso() {
   document.getElementById('ingreso-patente').value = '';
   document.getElementById('ingreso-km').value = '';
   document.getElementById('ingreso-motivo').value = 'Mantención';
-  document.getElementById('ingreso-mecanico').value = '';
+  document.getElementById('ingreso-fecha').value = new Date().toLocaleDateString('en-CA');
   document.getElementById('ficha-vehiculo').style.display = 'none';
   document.getElementById('checklist-container').style.display = 'none';
+  document.getElementById('btn-grabar-ingreso').disabled = false;
+  ultimoIngreso = null;
 }
 
 async function grabarIngreso() {
   const pat    = document.getElementById('ingreso-patente').value;
-  const km     = document.getElementById('ingreso-km').value;
+  const km     = parseInt(document.getElementById('ingreso-km').value);
+  const fecha  = document.getElementById('ingreso-fecha').value;
   const motivo = document.getElementById('ingreso-motivo').value;
-  const mec    = document.getElementById('ingreso-mecanico').value;
+  const hoy    = new Date().toLocaleDateString('en-CA');
 
-  if (!pat || !km) { toast('Selecciona patente e ingresa el KM', 'error'); return; }
+  if (!pat || !km || !fecha) { toast('Completa patente, kilometraje y fecha de ingreso', 'error'); return; }
+  if (fecha > hoy) { toast('La fecha de ingreso no puede ser futura', 'error'); return; }
+  if (ultimoIngreso && !ultimoIngreso.fecha_egreso) { toast(`El vehículo ya está en taller (folio ${ultimoIngreso.folio})`, 'error'); return; }
+  if (ultimoIngreso && km < Number(ultimoIngreso.km_mantencion)) {
+    toast(`El kilometraje (${km.toLocaleString('es-CL')}) es menor al del último ingreso (${Number(ultimoIngreso.km_mantencion).toLocaleString('es-CL')})`, 'error'); return;
+  }
 
-  // Obtener próximo folio
-  const { data: maxFolio } = await sb.from('taller_registros').select('folio').order('folio', { ascending: false }).limit(1);
-  const nuevoFolio = maxFolio && maxFolio.length > 0 ? (maxFolio[0].folio + 1) : 1000;
-
-  const payload = {
-    folio: nuevoFolio,
-    vehiculo_patente: pat,
-    fecha_ingreso: new Date().toISOString().slice(0,10),
-    km_mantencion: parseInt(km),
-    motivo_ingreso: motivo,
-    mecanico: mec || null,
-  };
-
+  const btn = document.getElementById('btn-grabar-ingreso');
+  btn.disabled = true;
   try {
-    const { error } = await sb.from('taller_registros').insert(payload);
+    // Folio desde la secuencia de la base: nunca se repite aunque dos usuarios graben a la vez
+    const { data: folio, error: eF } = await sb.rpc('siguiente_folio_taller');
+    if (eF) throw eF;
+    const { error } = await sb.from('taller_registros').insert({
+      folio, vehiculo_patente: pat, fecha_ingreso: fecha, km_mantencion: km,
+      motivo_ingreso: motivo, observaciones: '',
+    });
     if (error) throw error;
-    toast(`✅ Vehículo ${pat} ingresado al taller — Folio ${nuevoFolio}`);
+    toast(`✅ Vehículo ${pat} ingresado al taller — Folio ${folio}`);
+    await imprimirFicha(pat, { folio, fecha, km });
     limpiarIngreso();
     await loadTaller();
   } catch(e) {
     toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
+}
+
+// Ficha de mantención: formato del "Historial de Mantención" del legacy
+// (ítems × folios de los últimos 12 meses, con X donde se realizó).
+async function imprimirFicha(pat, nuevo) {
+  if (!pat) { toast('Selecciona una patente', 'error'); return; }
+  const win = window.open('', '_blank'); // se abre antes del await para que el navegador no la bloquee
+  if (!win) { toast('Permite las ventanas emergentes para imprimir la ficha', 'error'); return; }
+  win.document.write('<p style="font-family:sans-serif">Generando ficha…</p>');
+  await loadTiposMantencion();
+  const veh = allVehiculos.find(v => v.patente === pat) || { patente: pat };
+  const desde = new Date(); desde.setMonth(desde.getMonth() - MESES_FICHA);
+  const { data: regs } = await sb.from('taller_registros')
+    .select('folio, fecha_ingreso, km_mantencion')
+    .eq('vehiculo_patente', pat).gte('fecha_ingreso', desde.toLocaleDateString('en-CA'))
+    .order('fecha_ingreso', { ascending: false }).order('folio', { ascending: false });
+  const folios = (regs || []).filter(r => !nuevo || r.folio !== nuevo.folio);
+  const marcas = {};
+  if (folios.length) {
+    const { data: des } = await sb.from('taller_desglose').select('folio, codigo_mantencion, realizado')
+      .in('folio', folios.map(r => r.folio)).eq('realizado', true);
+    (des || []).forEach(d => { marcas[d.folio + '|' + d.codigo_mantencion] = true; });
+  }
+  const items = itemsDeVehiculo(veh);
+  const rt = allDocumentos.filter(d => d.vehiculo_patente === pat && d.tipo === 'Revisión Técnica')
+    .sort((a,b) => (b.fecha_vencimiento||'').localeCompare(a.fecha_vencimiento||''))[0];
+  const e = escHtml;
+  const cols = folios.map(r => `<th>${fmtDate(r.fecha_ingreso)}<br>${r.folio}<br>${Number(r.km_mantencion||0).toLocaleString('es-CL')}</th>`).join('');
+  const filas = items.map(it => `<tr><td class="it">${e(it.nombre)}</td><td class="km">${it.intervalo.toLocaleString('es-CL')} KM</td>${
+    folios.map(r => `<td class="x">${marcas[r.folio + '|' + it.codigo] ? 'X' : ''}</td>`).join('')}</tr>`).join('');
+  win.document.open();
+  win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Ficha ${e(pat)}</title><style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:16px;color:#000}
+    h1{font-size:15px;margin:0 0 4px} .sub{color:#555;margin-bottom:10px}
+    .cab{display:grid;grid-template-columns:repeat(4,auto);gap:3px 18px;margin-bottom:10px}
+    .nuevo{border:2px solid #f57c00;padding:6px 10px;margin-bottom:10px;font-weight:bold}
+    table{border-collapse:collapse;width:100%} th,td{border:1px solid #999;padding:2px 4px}
+    th{background:#f57c00;color:#fff;font-size:10px} td.it{background:#fbd5a8;font-weight:bold;white-space:nowrap}
+    td.km{background:#fbd5a8;text-align:right;white-space:nowrap} td.x{text-align:center}
+    @media print{button{display:none} @page{size:landscape;margin:10mm}}
+  </style></head><body>
+    <button onclick="print()" style="float:right;padding:6px 14px">🖨 Imprimir</button>
+    <h1>Historial de Mantenciones de Vehículo — ${e(pat)}</h1>
+    <div class="sub">NewTrans Logistic Chile S.A. · Últimos ${MESES_FICHA} meses · Emitido ${fmtDate(new Date().toLocaleDateString('en-CA'))}</div>
+    <div class="cab">
+      <div>Tipo: <b>${e(veh.tipo_taller || veh.tipo || '—')}</b></div><div>Marca: <b>${e(veh.marca || '—')}</b></div>
+      <div>Modelo: <b>${e(veh.modelo || '—')}</b></div><div>Año: <b>${e(String(veh.anio || '—'))}</b></div>
+      <div>Combustible: <b>${e(veh.combustible || '—')}</b></div><div>Área: <b>${e(veh.area_responsable || '—')}</b></div>
+      <div>Estado: <b>${e(veh.estado || '—')}</b></div><div>Rev. Técnica: <b>${rt ? fmtDate(rt.fecha_vencimiento) : '—'}</b></div>
+    </div>
+    ${nuevo ? `<div class="nuevo">INGRESO A TALLER · Folio ${nuevo.folio} · Fecha ${fmtDate(nuevo.fecha)} · Kilometraje ${nuevo.km.toLocaleString('es-CL')} km</div>` : ''}
+    <table><thead><tr><th style="text-align:left">MANTENCIÓN</th><th>KILOMETRAJE</th>${cols}</tr></thead><tbody>${filas}</tbody></table>
+    ${folios.length ? '' : '<p>Sin mantenciones registradas en los últimos ' + MESES_FICHA + ' meses.</p>'}
+  </body></html>`);
+  win.document.close();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2824,7 +2868,9 @@ async function saveTaller() {
     if (id) {
       ({ error } = await sb.from('taller_registros').update(payload).eq('id', id));
     } else {
-      ({ error } = await sb.from('taller_registros').insert(payload));
+      const { data: folio, error: eF } = await sb.rpc('siguiente_folio_taller');
+      if (eF) throw eF;
+      ({ error } = await sb.from('taller_registros').insert({ ...payload, folio }));
     }
     if (error) throw error;
     closeModal('modal-taller');

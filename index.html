@@ -908,7 +908,7 @@
               <thead>
                 <tr style="background:var(--surface2);">
                   <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Descripción</th>
-                  <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">KM Pasados</th>
+                  <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">KM Pasados de Mantención</th>
                 </tr>
               </thead>
               <tbody id="tbody-pendientes">
@@ -920,13 +920,13 @@
           <!-- Mantenciones Preventivas -->
           <div style="background:var(--surface);border:1px solid var(--green);border-radius:12px;overflow:hidden;">
             <div style="background:rgba(34,197,94,0.1);padding:12px 16px;font-family:var(--font-head);font-weight:700;color:var(--green);font-size:14px;">
-              🟢 Mantenciones Preventivas Próximas
+              🟢 Mantenciones Preventivas
             </div>
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="background:var(--surface2);">
                   <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Descripción</th>
-                  <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">KM Próximo</th>
+                  <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">KM Próxima Mantención</th>
                 </tr>
               </thead>
               <tbody id="tbody-preventivas">
@@ -2558,30 +2558,36 @@ async function cargarFichaVehiculo() {
   calcularChecklistIngreso();
 }
 
-// El desglose del último folio guarda, por ítem, el km de la última vez que se realizó
-// (el legacy arrastra ese dato folio a folio), así que basta con leer el último folio.
+// Km de la última vez que cada ítem se REALIZÓ, buscando en todo el historial del vehículo.
+// (El legacy contaba desde el último ingreso y por eso los ítems de 60.000+ km nunca quedaban pendientes.)
 async function cargarDesgloseVehiculo(pat) {
   desgloseCache[pat] = {};
-  if (!ultimoIngreso) return;
-  const { data: des } = await sb.from('taller_desglose').select('*').eq('folio', ultimoIngreso.folio);
+  const { data: regs } = await sb.from('taller_registros').select('folio').eq('vehiculo_patente', pat);
+  const folios = (regs || []).map(r => r.folio).filter(f => f != null);
+  if (!folios.length) return;
+  const { data: des } = await sb.from('taller_desglose').select('codigo_mantencion, km_realizado')
+    .in('folio', folios).eq('realizado', true);
   (des || []).forEach(d => {
-    desgloseCache[pat][d.codigo_mantencion] = { km_realizado: parseFloat(d.km_realizado) || 0, realizado: d.realizado };
+    const km = parseFloat(d.km_realizado) || 0, c = desgloseCache[pat][d.codigo_mantencion];
+    if (!c || km > c.km_realizado) desgloseCache[pat][d.codigo_mantencion] = { km_realizado: km };
   });
 }
 
-// Regla legacy: KM pasados = km actual − km última realización − intervalo.
-// > 0 → pendiente; intervalo 0 → se revisa en cada ingreso; resto → preventiva con su km próximo.
+// Mismas columnas del legacy:
+//   KM Pasados de Mantención = km actual − km última realización − intervalo  (> 0 → pendiente)
+//   KM Próxima Mantención    = km que faltan para el próximo servicio          (preventiva)
+// Ítem sin ninguna realización registrada → pendiente "Sin registro".
 function calcularItemsIngreso(items, desglose, kmActual) {
   const pendientes = [], preventivas = [];
   items.forEach(it => {
-    const kmUlt = desglose[it.codigo]?.km_realizado || 0;
-    const kmProximo = kmUlt + it.intervalo;
-    if (it.intervalo === 0) pendientes.push({ ...it, kmPasados: 0 });
-    else if (kmActual > kmProximo) pendientes.push({ ...it, kmPasados: kmActual - kmProximo });
-    else preventivas.push({ ...it, kmProximo });
+    const d = desglose[it.codigo];
+    if (!d) { pendientes.push({ ...it, kmPasados: null }); return; }
+    const falta = d.km_realizado + it.intervalo - kmActual;
+    if (falta < 0) pendientes.push({ ...it, kmPasados: -falta });
+    else preventivas.push({ ...it, kmFalta: falta });
   });
-  pendientes.sort((a,b) => b.kmPasados - a.kmPasados);
-  preventivas.sort((a,b) => a.kmProximo - b.kmProximo);
+  pendientes.sort((a,b) => (b.kmPasados ?? Infinity) - (a.kmPasados ?? Infinity));
+  preventivas.sort((a,b) => a.kmFalta - b.kmFalta);
   return { pendientes, preventivas };
 }
 
@@ -2602,10 +2608,10 @@ async function calcularChecklistIngreso() {
         <td style="padding:8px 12px;text-align:right;color:${color};font-weight:600;font-size:13px">${valor}</td>
       </tr>`;
   document.getElementById('tbody-pendientes').innerHTML = pendientes.length
-    ? pendientes.map(p => fila(p, p.intervalo === 0 ? 'Cada ingreso' : '+' + p.kmPasados.toLocaleString('es-CL') + ' km', 'var(--red)')).join('')
+    ? pendientes.map(p => fila(p, p.kmPasados == null ? 'Sin registro' : p.kmPasados.toLocaleString('es-CL'), 'var(--red)')).join('')
     : '<tr><td colspan="2" style="padding:16px;text-align:center;color:var(--green)">✅ Sin mantenciones pendientes</td></tr>';
   document.getElementById('tbody-preventivas').innerHTML = preventivas.length
-    ? preventivas.map(p => fila(p, p.kmProximo.toLocaleString('es-CL') + ' km', 'var(--green)')).join('')
+    ? preventivas.map(p => fila(p, p.kmFalta.toLocaleString('es-CL'), 'var(--green)')).join('')
     : '<tr><td colspan="2" style="padding:16px;text-align:center;color:var(--muted)">Sin mantenciones preventivas</td></tr>';
   document.getElementById('checklist-container').style.display = 'block';
 }

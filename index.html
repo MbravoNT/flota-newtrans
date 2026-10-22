@@ -1065,7 +1065,7 @@
         <option value="2">Resuelto</option>
       </select>
       <button class="btn btn-ghost" onclick="loadAverias()">↺ Actualizar</button>
-      <button class="btn btn-primary ml-auto" id="btn-nuevo-averia" onclick="openModalAveria()">+ Nueva Avería</button>
+      <button class="btn btn-primary ml-auto" id="btn-nuevo-averia" onclick="openIngresoAveria()">+ Ingreso de Averías</button>
     </div>
 
     <div class="table-wrap">
@@ -1322,6 +1322,48 @@
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-doc')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveDocumento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL INGRESO DE AVERÍAS (formato legacy) ═══ -->
+<div class="modal-overlay" id="modal-averia-ingreso">
+  <div class="modal" style="width:820px">
+    <h3>⚠️ Ingreso de Averías</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Patente del Vehículo *</label>
+        <select id="avi-patente" onchange="cargarAveriasVehiculo()"></select>
+      </div>
+      <div class="form-group">
+        <label>Fecha de Ingreso *</label>
+        <input type="date" id="avi-fecha" />
+      </div>
+      <div class="form-group full" id="avi-ficha" style="display:none;font-size:13px;color:var(--muted)"></div>
+      <div class="form-group full">
+        <label>Descripción de Avería * <span id="avi-cont" style="color:var(--muted);font-weight:400">(0/70)</span></label>
+        <input type="text" id="avi-desc" maxlength="70" placeholder="Ej: mal estado de crucetas"
+          oninput="document.getElementById('avi-cont').textContent='('+this.value.length+'/70)'" />
+      </div>
+      <div class="form-group full">
+        <label>Observación</label>
+        <textarea id="avi-obs" placeholder="Detalle adicional…"></textarea>
+      </div>
+      <div class="form-group full" style="align-items:flex-end">
+        <button class="btn btn-ghost" onclick="agregarAveriaGrilla()">➕ Agregar a la Grilla</button>
+      </div>
+      <div class="form-group full">
+        <label>Cambio o Reparación de Averías</label>
+        <div class="table-wrap" style="max-height:220px;overflow-y:auto">
+          <table><thead><tr><th>Descripción Avería</th><th>Fecha de Ingreso</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbody-avi"></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="limpiarIngresoAveria()">↺ Limpiar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-averia-ingreso')">Salir</button>
+      <button class="btn btn-primary" id="btn-grabar-avi" onclick="grabarIngresoAveria()">Grabar</button>
     </div>
   </div>
 </div>
@@ -2806,6 +2848,11 @@ async function cargarSalida() {
   const { pendientes } = calcularItemsIngreso(itemsDeVehiculo(veh), desgloseCache[pat] || {}, Number(salidaFolio.km_mantencion) || 0);
   const pend = new Set(pendientes.map(p => p.codigo));
   salidaItems = itemsDeVehiculo(veh).map(it => ({ ...it, en_lista: pend.has(it.codigo), marcado: pend.has(it.codigo) }));
+  // Averías pendientes del vehículo: se listan sin marcar; el mecánico marca las reparadas
+  await loadAverias();
+  allAverias.filter(a => a.vehiculo_patente === pat && parseInt(a.estado) !== 2).forEach(a => salidaItems.push({
+    codigo: 'AV' + a.id, averia_id: a.id, seccion: a.seccion || SECCION_AVERIA, nombre: a.descripcion, en_lista: true, marcado: false,
+  }));
   const info = document.getElementById('salida-info');
   info.style.display = 'block';
   info.textContent = `${veh?.tipo_taller || veh?.tipo || ''} · ${veh?.marca || ''} ${veh?.modelo || ''} · Ingreso ${fmtDate(salidaFolio.fecha_ingreso)} · ${fmtKm(salidaFolio.km_mantencion)}`;
@@ -2824,7 +2871,7 @@ function renderSalida() {
         onchange="salidaItems.find(x => x.codigo === '${i.codigo}').marcado = this.checked" style="width:18px;height:18px"></td>
     </tr>`).join('') : '<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Sin mantenciones pendientes. Agregue preventivas si corresponde.</td></tr>';
   document.getElementById('salida-preventiva').innerHTML = '<option value="">Seleccionar…</option>' +
-    salidaItems.filter(i => !i.en_lista).map(i => `<option value="${i.codigo}">${escHtml(i.nombre)}</option>`).join('');
+    salidaItems.filter(i => !i.en_lista && !i.averia_id).map(i => `<option value="${i.codigo}">${escHtml(i.nombre)}</option>`).join('');
 }
 
 function agregarPreventivaSalida() {
@@ -2852,7 +2899,7 @@ async function grabarSalida() {
     if (count) throw new Error(`El folio ${salidaFolio.folio} ya tiene mantenciones registradas`);
     const km = Number(salidaFolio.km_mantencion) || 0, prev = desgloseCache[salidaFolio.vehiculo_patente] || {};
     // Igual que el legacy: una fila por ítem del vehículo; si no se realizó, conserva el km de su última realización
-    const filas = salidaItems.map(i => ({
+    const filas = salidaItems.filter(i => !i.averia_id).map(i => ({
       folio: salidaFolio.folio, codigo_mantencion: i.codigo, realizado: i.marcado,
       km_realizado: i.marcado ? km : (prev[i.codigo]?.km_realizado ?? null),
       fecha_realizado: i.marcado ? fecha : null,
@@ -2863,6 +2910,12 @@ async function grabarSalida() {
       fecha_egreso: fecha, mecanico: mec, observaciones: document.getElementById('salida-obs').value.trim(),
     }).eq('id', salidaFolio.id);
     if (eR) throw eR;
+    const reparadas = salidaItems.filter(i => i.averia_id && i.marcado).map(i => i.averia_id);
+    if (reparadas.length) {
+      const { error: eA } = await sb.from('averias').update({ estado: 2, folio: salidaFolio.folio, fecha_realizado: fecha, mecanico: mec })
+        .in('id', reparadas);
+      if (eA) throw eA;
+    }
     toast(`✅ Salida registrada — ${salidaFolio.vehiculo_patente} · Folio ${salidaFolio.folio}`);
     await cargarSalidaPatentes();
     await loadTaller();
@@ -3193,6 +3246,84 @@ async function deleteAveria(id) {
   if (error) { toast(error.message, 'error'); return; }
   toast('Avería eliminada');
   await loadAverias();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INGRESO DE AVERÍAS (formato legacy): varias descripciones por ingreso,
+// quedan Pendientes y se resuelven en la Salida del Taller (folio + mecánico).
+// ═══════════════════════════════════════════════════════════════
+const SECCION_AVERIA = 'Cambio o Reparacion';
+let aviNuevas = [];
+
+function openIngresoAveria() {
+  const sel = document.getElementById('avi-patente');
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+      .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo||'')} · ${escHtml(v.ciudad||'')}</option>`).join('');
+  limpiarIngresoAveria();
+  document.getElementById('modal-averia-ingreso').classList.add('open');
+}
+
+function limpiarIngresoAveria() {
+  aviNuevas = [];
+  document.getElementById('avi-patente').value = '';
+  document.getElementById('avi-fecha').value = new Date().toLocaleDateString('en-CA');
+  document.getElementById('avi-desc').value = '';
+  document.getElementById('avi-obs').value = '';
+  document.getElementById('avi-cont').textContent = '(0/70)';
+  document.getElementById('avi-ficha').style.display = 'none';
+  renderAveriasGrilla();
+}
+
+function cargarAveriasVehiculo() {
+  const pat = document.getElementById('avi-patente').value;
+  const v = allVehiculos.find(x => x.patente === pat);
+  const f = document.getElementById('avi-ficha');
+  f.style.display = v ? 'block' : 'none';
+  if (v) f.textContent = `${v.tipo_taller || v.tipo || ''} · ${v.marca || ''} ${v.modelo || ''} · Año ${v.anio || '—'} · ${v.combustible || ''} · Área ${v.area_responsable || '—'} · Estado ${v.estado || '—'}`;
+  aviNuevas = [];
+  renderAveriasGrilla();
+}
+
+function renderAveriasGrilla() {
+  const pat = document.getElementById('avi-patente').value;
+  const previas = allAverias.filter(a => a.vehiculo_patente === pat && parseInt(a.estado) !== 2);
+  const filas = [
+    ...previas.map(a => `<tr><td>${escHtml(a.descripcion)}</td><td>${fmtDate(a.fecha_ingreso)}</td><td>${estadoAveriaBadge(a.estado)}</td><td></td></tr>`),
+    ...aviNuevas.map((a, i) => `<tr style="border-left:3px solid var(--accent)"><td>${escHtml(a.descripcion)}${a.observaciones ? '<br><span style="font-size:11px;color:var(--muted)">' + escHtml(a.observaciones) + '</span>' : ''}</td>
+      <td>${fmtDate(a.fecha_ingreso)}</td><td><span class="badge badge-orange">Nueva</span></td>
+      <td><button class="btn btn-sm" onclick="aviNuevas.splice(${i},1);renderAveriasGrilla()">✕</button></td></tr>`),
+  ];
+  document.getElementById('tbody-avi').innerHTML = filas.join('') ||
+    '<tr><td colspan="4" class="empty-state">Sin averías pendientes</td></tr>';
+}
+
+function agregarAveriaGrilla() {
+  const pat = document.getElementById('avi-patente').value;
+  const fecha = document.getElementById('avi-fecha').value;
+  const desc = document.getElementById('avi-desc').value.trim();
+  if (!pat || !fecha || !desc) { toast('Completa patente, fecha y descripción', 'error'); return; }
+  if (fecha > new Date().toLocaleDateString('en-CA')) { toast('La fecha de ingreso no puede ser futura', 'error'); return; }
+  aviNuevas.push({ vehiculo_patente: pat, fecha_ingreso: fecha, descripcion: desc,
+    observaciones: document.getElementById('avi-obs').value.trim() || null, seccion: SECCION_AVERIA, estado: 0 });
+  document.getElementById('avi-desc').value = '';
+  document.getElementById('avi-obs').value = '';
+  document.getElementById('avi-cont').textContent = '(0/70)';
+  renderAveriasGrilla();
+}
+
+async function grabarIngresoAveria() {
+  if (!aviNuevas.length) { toast('Agrega al menos una avería a la grilla', 'error'); return; }
+  const btn = document.getElementById('btn-grabar-avi');
+  btn.disabled = true;
+  try {
+    const { error } = await sb.from('averias').insert(aviNuevas);
+    if (error) throw error;
+    toast(`✅ ${aviNuevas.length} avería(s) registradas`);
+    await loadAverias();
+    cargarAveriasVehiculo();
+  } catch(e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 
 // ═══════════════════════════════════════════════════════════════

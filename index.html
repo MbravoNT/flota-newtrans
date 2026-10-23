@@ -843,6 +843,7 @@
     <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);">
       <button class="nav-btn active" id="subtab-btn-ingreso" onclick="showSubTab('ingreso')" style="font-size:13px">📋 Ingreso a Taller</button>
       <button class="nav-btn" id="subtab-btn-salida" onclick="showSubTab('salida');cargarSalidaPatentes()" style="font-size:13px">🚪 Salida del Taller</button>
+      <button class="nav-btn" id="subtab-btn-revtec" onclick="showSubTab('revtec');initRevTec()" style="font-size:13px">📑 Revisión Técnica</button>
       <button class="nav-btn" id="subtab-btn-historial" onclick="showSubTab('historial')" style="font-size:13px">📂 Historial</button>
     </div>
 
@@ -992,6 +993,44 @@
               <textarea id="salida-obs" rows="8" placeholder="Trabajos realizados, repuestos, hallazgos…"></textarea>
             </div>
             <button class="btn btn-primary" id="btn-grabar-salida" onclick="grabarSalida()">✅ Grabar Salida del Vehículo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-TAB: REVISIÓN TÉCNICA -->
+    <div id="subtab-revtec" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:16px;color:var(--accent)">Ingreso de Revisión Técnica</div>
+          <div class="form-group"><label>Patente del Vehículo *</label><select id="rt-patente" onchange="cargarRevTec()"></select></div>
+          <div class="form-group"><label>Fecha de Ingreso (revisión) *</label><input type="date" id="rt-fecha" /></div>
+          <div class="form-group"><label>N° Documento</label><input type="text" id="rt-doc" maxlength="30" placeholder="N° certificado" /></div>
+          <div class="form-group"><label>Estado *</label>
+            <select id="rt-estado" onchange="document.getElementById('rt-prox').disabled = this.value !== 'APROBADA'">
+              <option value="APROBADA">APROBADA</option><option value="RECHAZADA">RECHAZADA</option>
+            </select></div>
+          <div class="form-group"><label>Fecha Próxima Revisión *</label><input type="date" id="rt-prox" /></div>
+          <div class="form-group"><label>Observación</label><input type="text" id="rt-obs" placeholder="Ej: GASES" /></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+            <button class="btn btn-ghost" onclick="initRevTec()">↺ Limpiar</button>
+            <button class="btn btn-primary" id="btn-grabar-rt" onclick="grabarRevTec()">✅ Ingresar</button>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px">Información</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:16px">
+            <div><span style="color:var(--muted)">Tipo de Vehículo:</span> <strong id="rt-i-tipo">—</strong></div>
+            <div><span style="color:var(--muted)">Año:</span> <strong id="rt-i-anio">—</strong></div>
+            <div><span style="color:var(--muted)">Marca:</span> <strong id="rt-i-marca">—</strong></div>
+            <div><span style="color:var(--muted)">Fecha Rev. Tec.:</span> <strong id="rt-i-fecha">—</strong></div>
+            <div><span style="color:var(--muted)">Modelo:</span> <strong id="rt-i-modelo">—</strong></div>
+            <div><span style="color:var(--muted)">Estado Rev. Tec.:</span> <strong id="rt-i-estado">—</strong></div>
+          </div>
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:8px">Historial</div>
+          <div class="table-wrap" style="max-height:380px;overflow-y:auto">
+            <table><thead><tr><th>Fecha</th><th>N° Documento</th><th>Fecha Próxima Rev.</th><th>Estado</th></tr></thead>
+            <tbody id="tbody-rt"><tr><td colspan="4" class="empty-state">Seleccione una patente</td></tr></tbody></table>
           </div>
         </div>
       </div>
@@ -2587,7 +2626,7 @@ async function loadTiposMantencion() {
 }
 
 function showSubTab(name) {
-  ['ingreso','salida','historial'].forEach(n => {
+  ['ingreso','salida','revtec','historial'].forEach(n => {
     document.getElementById('subtab-' + n).style.display = n === name ? 'block' : 'none';
     const btn = document.getElementById('subtab-btn-' + n);
     if (btn) btn.classList.toggle('active', n === name);
@@ -2924,6 +2963,70 @@ async function grabarSalida() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REVISIÓN TÉCNICA (historial en taller_revisiones_tecnicas; un trigger
+// actualiza el vencimiento en Documentos cuando la revisión es APROBADA)
+// ═══════════════════════════════════════════════════════════════
+function initRevTec() {
+  const sel = document.getElementById('rt-patente');
+  sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
+    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+      .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo||'')} · ${escHtml(v.ciudad||'')}</option>`).join('');
+  ['rt-doc','rt-obs','rt-prox'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('rt-fecha').value = new Date().toLocaleDateString('en-CA');
+  document.getElementById('rt-estado').value = 'APROBADA';
+  document.getElementById('rt-prox').disabled = false;
+  ['rt-i-tipo','rt-i-anio','rt-i-marca','rt-i-modelo','rt-i-fecha','rt-i-estado'].forEach(id => { document.getElementById(id).textContent = '—'; });
+  document.getElementById('tbody-rt').innerHTML = '<tr><td colspan="4" class="empty-state">Seleccione una patente</td></tr>';
+}
+
+async function cargarRevTec() {
+  const pat = document.getElementById('rt-patente').value;
+  if (!pat) return initRevTec();
+  const v = allVehiculos.find(x => x.patente === pat) || {};
+  const set = (id, t) => { document.getElementById(id).textContent = t || '—'; };
+  set('rt-i-tipo', v.tipo_taller || v.tipo); set('rt-i-anio', v.anio ? String(v.anio) : ''); set('rt-i-marca', v.marca); set('rt-i-modelo', v.modelo);
+  const doc = allDocumentos.filter(d => d.vehiculo_patente === pat && d.tipo === 'Revisión Técnica')
+    .sort((a,b) => (b.fecha_vencimiento||'').localeCompare(a.fecha_vencimiento||''))[0];
+  const vencida = doc && doc.fecha_vencimiento < new Date().toLocaleDateString('en-CA');
+  set('rt-i-fecha', doc ? fmtDate(doc.fecha_vencimiento) : '');
+  document.getElementById('rt-i-estado').innerHTML = !doc ? '—'
+    : vencida ? '<span style="color:var(--red)">VENCIDA</span>' : '<span style="color:var(--green)">VIGENTE</span>';
+  const { data, error } = await sb.from('taller_revisiones_tecnicas').select('*')
+    .eq('vehiculo_patente', pat).order('fecha_revision', { ascending: false });
+  if (error) { toast(error.message, 'error'); return; }
+  document.getElementById('tbody-rt').innerHTML = (data || []).length ? data.map(r => `<tr>
+      <td>${fmtDate(r.fecha_revision)}</td><td>${escHtml(r.num_documento) || '—'}</td><td>${fmtDate(r.fecha_proxima)}</td>
+      <td>${r.estado === 'APROBADA' ? '<span class="badge badge-green">APROBADA</span>' : '<span class="badge badge-red">RECHAZADA</span>'}${r.observaciones ? ' <span style="font-size:11px;color:var(--muted)">' + escHtml(r.observaciones) + '</span>' : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="4" class="empty-state">Sin revisiones registradas</td></tr>';
+}
+
+async function grabarRevTec() {
+  const pat = document.getElementById('rt-patente').value;
+  const fecha = document.getElementById('rt-fecha').value;
+  const estado = document.getElementById('rt-estado').value;
+  const prox = estado === 'APROBADA' ? document.getElementById('rt-prox').value : null;
+  if (!pat || !fecha) { toast('Completa patente y fecha de revisión', 'error'); return; }
+  if (fecha > new Date().toLocaleDateString('en-CA')) { toast('La fecha de revisión no puede ser futura', 'error'); return; }
+  if (estado === 'APROBADA' && (!prox || prox <= fecha)) { toast('Indica una fecha próxima posterior a la revisión', 'error'); return; }
+  const btn = document.getElementById('btn-grabar-rt');
+  btn.disabled = true;
+  try {
+    const { error } = await sb.from('taller_revisiones_tecnicas').insert({
+      vehiculo_patente: pat, fecha_revision: fecha, fecha_proxima: prox, estado,
+      num_documento: document.getElementById('rt-doc').value.trim() || null,
+      observaciones: document.getElementById('rt-obs').value.trim() || null,
+      usuario: currentPerfil?.nombre || null,
+    });
+    if (error) throw error;
+    toast(`✅ Revisión técnica registrada — ${pat}`);
+    await loadDocumentos();
+    ['rt-doc','rt-obs','rt-prox'].forEach(id => { document.getElementById(id).value = ''; });
+    await cargarRevTec();
+  } catch(e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 
 // ═══════════════════════════════════════════════════════════════

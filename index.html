@@ -2881,9 +2881,17 @@ async function imprimirFicha(pat, nuevo, opts = {}) {
   try { F = await datosFicha(pat, { ...opts, excluir: nuevo?.folio, hasta: opts.hasta || (nuevo ? nuevo.fecha : undefined) }); }
   catch(e) { win.close(); toast(e.message, 'error'); return; }
   const { veh, folios, marcas, items, rt, meses } = F, e = escHtml;
-  const cols = folios.map(r => `<th>${fmtDate(r.fecha_ingreso)}<br>${r.folio}<br>${Number(r.km_mantencion||0).toLocaleString('es-CL')}</th>`).join('');
-  const filas = items.map(it => `<tr><td class="it">${e(it.nombre)}</td><td class="km">${it.intervalo.toLocaleString('es-CL')} KM</td>${
-    folios.map(r => `<td class="x">${marcas[r.folio + '|' + it.codigo] ? 'X' : ''}</td>`).join('')}</tr>`).join('');
+  // Ancho fijo para que quepa en una hoja horizontal; con muchos folios, 12 columnas por hoja.
+  const POR_HOJA = 12, tablas = [];
+  for (let i = 0; i < Math.max(folios.length, 1); i += POR_HOJA) {
+    const fs = folios.slice(i, i + POR_HOJA);
+    const relleno = '<td class="x"></td>'.repeat(POR_HOJA - fs.length);
+    tablas.push(`<table><colgroup><col class="c-it"><col class="c-km">${'<col>'.repeat(POR_HOJA)}</colgroup>
+      <thead><tr><th style="text-align:left">MANTENCIÓN</th><th>KM</th>${fs.map(r =>
+        `<th>${fmtDate(r.fecha_ingreso)}<br>${r.folio}<br>${Number(r.km_mantencion||0).toLocaleString('es-CL')}</th>`).join('')}${'<th></th>'.repeat(POR_HOJA - fs.length)}</tr></thead>
+      <tbody>${items.map(it => `<tr><td class="it">${e(it.nombre)}</td><td class="km">${it.intervalo.toLocaleString('es-CL')}</td>${
+        fs.map(r => `<td class="x">${marcas[r.folio + '|' + it.codigo] ? 'X' : ''}</td>`).join('')}${relleno}</tr>`).join('')}</tbody></table>`);
+  }
   const periodo = meses ? `Últimos ${meses} meses` : 'Histórico completo';
   win.document.open();
   win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Ficha ${e(pat)}</title><style>
@@ -2891,10 +2899,14 @@ async function imprimirFicha(pat, nuevo, opts = {}) {
     h1{font-size:15px;margin:0 0 4px} .sub{color:#555;margin-bottom:10px}
     .cab{display:grid;grid-template-columns:repeat(4,auto);gap:3px 18px;margin-bottom:10px}
     .nuevo{border:2px solid #f57c00;padding:6px 10px;margin-bottom:10px;font-weight:bold}
-    .wrap{overflow-x:auto} table{border-collapse:collapse;width:100%} th,td{border:1px solid #999;padding:2px 4px}
-    th{background:#f57c00;color:#fff;font-size:10px} td.it{background:#fbd5a8;font-weight:bold;white-space:nowrap}
-    td.km{background:#fbd5a8;text-align:right;white-space:nowrap} td.x{text-align:center}
-    @media print{button{display:none} @page{size:landscape;margin:10mm}}
+    table{border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:8px} th,td{border:1px solid #999;padding:1px 3px;overflow:hidden}
+    col.c-it{width:30%} col.c-km{width:6%}
+    th{background:#f57c00;color:#fff;font-size:8px;line-height:1.15} td{font-size:9px;line-height:1.1}
+    td.it{background:#fbd5a8;font-weight:bold;line-height:1.15}
+    td.km{background:#fbd5a8;text-align:right} td.x{text-align:center;font-weight:bold}
+    table + table{page-break-before:always}
+    th,td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @media print{button{display:none} body{margin:0;font-size:10px} h1{font-size:13px} .sub,.cab,.nuevo{margin-bottom:5px} .nuevo{padding:3px 8px} @page{size:A4 landscape;margin:7mm}}
   </style></head><body>
     <button onclick="print()" style="float:right;padding:6px 14px">🖨 Imprimir</button>
     <h1>Historial de Mantenciones de Vehículo — ${e(pat)}</h1>
@@ -2906,7 +2918,7 @@ async function imprimirFicha(pat, nuevo, opts = {}) {
       <div>Estado: <b>${e(veh.estado || '—')}</b></div><div>Rev. Técnica: <b>${rt ? fmtDate(rt.fecha_vencimiento) : '—'}</b></div>
     </div>
     ${nuevo ? `<div class="nuevo">INGRESO A TALLER · Folio ${nuevo.folio} · Fecha ${fmtDate(nuevo.fecha)} · Kilometraje ${Number(nuevo.km).toLocaleString('es-CL')} km</div>` : ''}
-    <div class="wrap"><table><thead><tr><th style="text-align:left">MANTENCIÓN</th><th>KILOMETRAJE</th>${cols}</tr></thead><tbody>${filas}</tbody></table></div>
+    ${tablas.join('')}
     ${folios.length ? '' : '<p>Sin mantenciones registradas en el período.</p>'}
   </body></html>`);
   win.document.close();

@@ -2700,8 +2700,8 @@ function showSubTab(name) {
   });
 }
 
-// El perfil Mecánico solo ve la flota de Santiago y Operaciones; Admin/Gestor ven todo
-const CIUDADES_TALLER = ['SANTIAGO', 'OPERACIONES'];
+// El perfil Mecánico solo ve la flota de Santiago, Operaciones y Taller; Admin/Gestor ven todo
+const CIUDADES_TALLER = ['SANTIAGO', 'OPERACIONES', 'TALLER'];
 const vehTaller = () => currentPerfil?.rol !== 'Mecánico' ? allVehiculos
   : allVehiculos.filter(v => CIUDADES_TALLER.includes((v.ciudad || '').toUpperCase()));
 

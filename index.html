@@ -865,7 +865,7 @@
           </div>
           <div class="form-group">
             <label>Motivo Ingreso</label>
-            <select id="ingreso-motivo">
+            <select id="ingreso-motivo" onchange="document.getElementById('ingreso-reparacion').style.display = this.value === 'Reparación' ? 'block' : 'none'">
               <option>Mantención</option>
               <option>Reparación</option>
               <option>Revisión</option>
@@ -876,6 +876,10 @@
             <label>Fecha de Ingreso *</label>
             <input type="date" id="ingreso-fecha" />
           </div>
+        </div>
+        <div id="ingreso-reparacion" class="form-group" style="display:none;margin-bottom:16px;">
+          <label>Averías a reparar * <span style="color:var(--muted);font-weight:400">(una por línea, máx. 70 caracteres cada una — quedan registradas en ⚠️ Averías)</span></label>
+          <textarea id="ingreso-averias" rows="3" placeholder="Ej: Cambio de pastillas de freno delanteras&#10;Luz de freno trasera izquierda no enciende"></textarea>
         </div>
 
         <!-- Info vehículo -->
@@ -1071,6 +1075,22 @@
           <div style="display:flex;gap:10px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="exportarInformeAverias()">⬇ Exportar Excel</button>
             <button class="btn btn-primary" onclick="verInformeAverias()">📄 Ver / Imprimir</button>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;grid-column:1 / -1;">
+          <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:4px;color:var(--accent)">Informe de Taller (Observaciones)</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Trabajos y hallazgos registrados en las observaciones de cada folio, incluidos los que no están en el check de mantención.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
+            <div class="form-group"><label>Patente del Vehículo</label><select id="inf-obs-patente"></select></div>
+            <div class="form-group"><label>Ciudad</label><select id="inf-obs-ciudad"></select></div>
+            <div class="form-group"><label>Período</label>
+              <select id="inf-obs-periodo"><option value="12">Últimos 12 meses</option><option value="3">Últimos 3 meses</option><option value="1">Último mes</option><option value="">Histórico completo</option></select></div>
+            <div class="form-group"><label>Folios</label>
+              <select id="inf-obs-solo"><option value="1">Solo con observaciones</option><option value="">Todos</option></select></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="exportarInformeTaller()">⬇ Exportar Excel</button>
+            <button class="btn btn-primary" onclick="verInformeTaller()">📄 Ver / Imprimir</button>
           </div>
         </div>
       </div>
@@ -2800,6 +2820,8 @@ function limpiarIngreso() {
   document.getElementById('ingreso-patente').value = '';
   document.getElementById('ingreso-km').value = '';
   document.getElementById('ingreso-motivo').value = 'Mantención';
+  document.getElementById('ingreso-averias').value = '';
+  document.getElementById('ingreso-reparacion').style.display = 'none';
   document.getElementById('ingreso-fecha').value = new Date().toLocaleDateString('en-CA');
   document.getElementById('ficha-vehiculo').style.display = 'none';
   document.getElementById('checklist-container').style.display = 'none';
@@ -2820,6 +2842,12 @@ async function grabarIngreso() {
   if (ultimoIngreso && km < Number(ultimoIngreso.km_mantencion)) {
     toast(`El kilometraje (${km.toLocaleString('es-CL')}) es menor al del último ingreso (${Number(ultimoIngreso.km_mantencion).toLocaleString('es-CL')})`, 'error'); return;
   }
+  // Ingreso por reparación: cada línea es una avería que queda pendiente en ⚠️ Averías y en la Salida
+  const averias = motivo === 'Reparación'
+    ? document.getElementById('ingreso-averias').value.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  if (motivo === 'Reparación' && !averias.length) { toast('Ingresa al menos una avería a reparar', 'error'); return; }
+  const larga = averias.find(a => a.length > 70);
+  if (larga) { toast(`Avería de más de 70 caracteres: "${larga.slice(0, 30)}…"`, 'error'); return; }
 
   const btn = document.getElementById('btn-grabar-ingreso');
   btn.disabled = true;
@@ -2832,7 +2860,14 @@ async function grabarIngreso() {
       motivo_ingreso: motivo, observaciones: '',
     });
     if (error) throw error;
-    toast(`✅ Vehículo ${pat} ingresado al taller — Folio ${folio}`);
+    let eA = null;
+    if (averias.length) {
+      ({ error: eA } = await sb.from('averias').insert(averias.map(descripcion => ({
+        vehiculo_patente: pat, fecha_ingreso: fecha, descripcion, seccion: SECCION_AVERIA, estado: 0 }))));
+      await loadAverias();
+    }
+    if (eA) toast(`Folio ${folio} creado, pero las averías no se grabaron: ${eA.message}. Regístralas en ⚠️ Averías.`, 'error');
+    else toast(`✅ Vehículo ${pat} ingresado al taller — Folio ${folio}` + (averias.length ? ` · ${averias.length} avería(s) registradas` : ''));
     await imprimirFicha(pat, { folio, fecha, km });
     limpiarIngreso();
     await loadTaller();
@@ -3119,11 +3154,13 @@ function initInformes() {
     [...new Set(allVehiculos.filter(v => v.tipo_taller && v.ciudad).map(v => v.ciudad))].sort()
       .map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
   selC.value = cAct;
+  document.getElementById('inf-obs-ciudad').innerHTML = selC.innerHTML;
   document.getElementById('inf-hist-patente').innerHTML = '<option value="">Seleccionar patente…</option>' +
     [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo_taller || v.tipo || '')}</option>`).join('');
   document.getElementById('inf-av-patente').innerHTML = '<option value="">Toda la flota</option>' +
     document.getElementById('inf-hist-patente').innerHTML.replace(/^<option value="">[^<]*<\/option>/, '');
+  document.getElementById('inf-obs-patente').innerHTML = document.getElementById('inf-av-patente').innerHTML;
 }
 
 // ─── Informe de Averías (independiente del historial de mantención) ───
@@ -3154,6 +3191,59 @@ async function exportarInformeAverias() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Averías');
     XLSX.writeFile(wb, `Informe_Averias_${new Date().toLocaleDateString('en-CA')}.xlsx`);
   } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── Informe de Taller: observaciones por folio (lo que no está en el check) ───
+async function datosInformeTaller() {
+  const val = id => document.getElementById(id).value;
+  const pat = val('inf-obs-patente'), ciudad = val('inf-obs-ciudad'), meses = val('inf-obs-periodo'), solo = val('inf-obs-solo');
+  let q = () => {
+    let x = sb.from('taller_registros').select('folio, vehiculo_patente, fecha_ingreso, fecha_egreso, km_mantencion, mecanico, motivo_ingreso, observaciones')
+      .not('folio', 'is', null).order('fecha_ingreso', { ascending: false });
+    if (pat) x = x.eq('vehiculo_patente', pat);
+    if (meses) x = x.gte('fecha_ingreso', new Date(new Date().setMonth(new Date().getMonth() - Number(meses))).toLocaleDateString('en-CA'));
+    return x;
+  };
+  const ciu = {}; allVehiculos.forEach(v => { ciu[v.patente] = v.ciudad || ''; });
+  return (await fetchAll(q)).map(r => ({ ...r, ciudad: ciu[r.vehiculo_patente] || '' }))
+    .filter(r => (!ciudad || r.ciudad === ciudad) && (!solo || (r.observaciones || '').trim()));
+}
+
+async function exportarInformeTaller() {
+  try {
+    if (typeof XLSX === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const rows = (await datosInformeTaller()).map(r => ({
+      'Folio': r.folio, 'Patente': r.vehiculo_patente, 'Ciudad': r.ciudad, 'Fecha Ingreso': fmtDate(r.fecha_ingreso),
+      'Fecha Salida': r.fecha_egreso ? fmtDate(r.fecha_egreso) : 'En taller', 'KM': Number(r.km_mantencion) || '',
+      'Mecánico': r.mecanico || '', 'Motivo Ingreso': r.motivo_ingreso || '', 'Observaciones': r.observaciones || '' }));
+    if (!rows.length) { toast('No hay folios con esos filtros', 'error'); return; }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Taller');
+    XLSX.writeFile(wb, `Informe_Taller_${new Date().toLocaleDateString('en-CA')}.xlsx`);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function verInformeTaller() {
+  const win = window.open('', '_blank'); // antes del await para que el navegador no la bloquee
+  if (!win) { toast('Permite las ventanas emergentes para imprimir', 'error'); return; }
+  let list;
+  try { list = await datosInformeTaller(); } catch(err) { win.close(); toast(err.message, 'error'); return; }
+  const e = escHtml, sel = id => document.getElementById(id), txt = id => sel(id).options[sel(id).selectedIndex].text;
+  win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe de Taller</title><style>
+    body{font-family:Arial,sans-serif;font-size:12px;margin:20px} h1{font-size:16px;margin:0 0 6px}
+    table{border-collapse:collapse;width:100%;margin-top:8px} th,td{border:1px solid #999;padding:3px 6px;vertical-align:top}
+    th{background:#f57c00;color:#fff;text-align:left} td.obs{white-space:pre-wrap;width:40%}
+    @page{size:A4 landscape} @media print{button{display:none}}
+  </style></head><body>
+    <button onclick="print()" style="float:right;padding:6px 14px">🖨 Imprimir</button>
+    <h1>Informe de Taller — Observaciones</h1>
+    <div>Patente: <b>${e(txt('inf-obs-patente'))}</b> · Ciudad: <b>${e(txt('inf-obs-ciudad'))}</b> · Período: <b>${e(txt('inf-obs-periodo'))}</b> · ${e(txt('inf-obs-solo'))} · Emitido: <b>${fmtDate(new Date().toLocaleDateString('en-CA'))}</b></div>
+    <div style="margin:8px 0">Folios: <b>${list.length}</b></div>
+    <table><thead><tr><th>Folio</th><th>Patente</th><th>Ciudad</th><th>Ingreso</th><th>Salida</th><th>KM</th><th>Mecánico</th><th>Motivo</th><th>Observaciones</th></tr></thead><tbody>
+      ${list.map(r => `<tr><td>${r.folio}</td><td>${e(r.vehiculo_patente || '')}</td><td>${e(r.ciudad)}</td><td>${fmtDate(r.fecha_ingreso)}</td><td>${r.fecha_egreso ? fmtDate(r.fecha_egreso) : 'En taller'}</td><td>${Number(r.km_mantencion || 0).toLocaleString('es-CL')}</td><td>${e(r.mecanico || '')}</td><td>${e(r.motivo_ingreso || '')}</td><td class="obs">${e(r.observaciones || '')}</td></tr>`).join('') || '<tr><td colspan="9">Sin folios con esos filtros</td></tr>'}
+    </tbody></table>
+  </body></html>`);
+  win.document.close();
 }
 
 async function verInformeAverias() {

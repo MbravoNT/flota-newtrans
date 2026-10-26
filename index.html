@@ -347,6 +347,7 @@
       transition: all .3s;
       z-index: 300;
       max-width: 320px;
+      pointer-events: none; /* invisible no debe tapar botones (ej. Grabar Salida) */
     }
     #toast.show { opacity: 1; transform: translateY(0); }
     #toast.success { border-color: var(--green); color: var(--green); }

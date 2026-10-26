@@ -2700,11 +2700,16 @@ function showSubTab(name) {
   });
 }
 
+// El perfil Mecánico solo ve la flota de Santiago y Operaciones; Admin/Gestor ven todo
+const CIUDADES_TALLER = ['SANTIAGO', 'OPERACIONES'];
+const vehTaller = () => currentPerfil?.rol !== 'Mecánico' ? allVehiculos
+  : allVehiculos.filter(v => CIUDADES_TALLER.includes((v.ciudad || '').toUpperCase()));
+
 function populateIngresoPatentes() {
   const sel = document.getElementById('ingreso-patente');
   if (!sel) return;
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo||'')} · ${escHtml(v.ciudad||'')}</option>`).join('');
   const f = document.getElementById('ingreso-fecha');
   if (f && !f.value) f.value = new Date().toLocaleDateString('en-CA');
@@ -3087,7 +3092,7 @@ async function grabarSalida() {
 function initRevTec() {
   const sel = document.getElementById('rt-patente');
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo||'')} · ${escHtml(v.ciudad||'')}</option>`).join('');
   ['rt-doc','rt-obs','rt-prox'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('rt-fecha').value = new Date().toLocaleDateString('en-CA');
@@ -3152,12 +3157,12 @@ let pendientesFlota = [];
 function initInformes() {
   const selC = document.getElementById('inf-pend-ciudad'), cAct = selC.value;
   selC.innerHTML = '<option value="">Todas las ciudades</option>' +
-    [...new Set(allVehiculos.filter(v => v.tipo_taller && v.ciudad).map(v => v.ciudad))].sort()
+    [...new Set(vehTaller().filter(v => v.tipo_taller && v.ciudad).map(v => v.ciudad))].sort()
       .map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
   selC.value = cAct;
   document.getElementById('inf-obs-ciudad').innerHTML = selC.innerHTML;
   document.getElementById('inf-hist-patente').innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo_taller || v.tipo || '')}</option>`).join('');
   document.getElementById('inf-av-patente').innerHTML = '<option value="">Toda la flota</option>' +
     document.getElementById('inf-hist-patente').innerHTML.replace(/^<option value="">[^<]*<\/option>/, '');
@@ -3314,7 +3319,7 @@ async function calcularPendientesFlota() {
       const m = hecho[pat] = hecho[pat] || {}, km = parseFloat(d.km_realizado) || 0;
       if (!m[d.codigo_mantencion] || km > m[d.codigo_mantencion].km_realizado) m[d.codigo_mantencion] = { km_realizado: km };
     });
-    const flota = allVehiculos.filter(v => v.tipo_taller && v.estado !== 'Inactivo');
+    const flota = vehTaller().filter(v => v.tipo_taller && v.estado !== 'Inactivo');
     pendientesFlota = flota.map(v => {
       const u = ultimo[v.patente];
       const km = Math.max(Number(v.odometro) || 0, Number(u?.km_mantencion) || 0);
@@ -3511,7 +3516,7 @@ function openModalTaller() {
   // Poblar patentes
   const sel = document.getElementById('taller-patente');
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${v.patente}">${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
   document.getElementById('modal-taller').classList.add('open');
 }
@@ -3523,7 +3528,7 @@ function editTaller(id) {
   document.getElementById('taller-id').value = r.id;
   const sel = document.getElementById('taller-patente');
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${v.patente}" ${v.patente===r.vehiculo_patente?'selected':''}>${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
   document.getElementById('taller-mecanico').value    = r.mecanico || '';
   document.getElementById('taller-fecha-ingreso').value = r.fecha_ingreso || '';
@@ -3657,7 +3662,7 @@ function openModalAveria() {
   document.getElementById('averia-estado').value = '0';
   const sel = document.getElementById('averia-patente');
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${v.patente}">${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
   document.getElementById('modal-averia').classList.add('open');
 }
@@ -3669,7 +3674,7 @@ function editAveria(id) {
   document.getElementById('averia-id').value = a.id;
   const sel = document.getElementById('averia-patente');
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((x,y) => x.patente.localeCompare(y.patente))
+    [...vehTaller()].sort((x,y) => x.patente.localeCompare(y.patente))
       .map(v => `<option value="${v.patente}" ${v.patente===a.vehiculo_patente?'selected':''}>${v.patente} · ${v.tipo||''} · ${v.ciudad||''}</option>`).join('');
   document.getElementById('averia-mecanico').value         = a.mecanico || '';
   document.getElementById('averia-fecha-ingreso').value    = a.fecha_ingreso || '';
@@ -3729,7 +3734,7 @@ let aviNuevas = [];
 function openIngresoAveria() {
   const sel = document.getElementById('avi-patente');
   sel.innerHTML = '<option value="">Seleccionar patente…</option>' +
-    [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
+    [...vehTaller()].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo||'')} · ${escHtml(v.ciudad||'')}</option>`).join('');
   limpiarIngresoAveria();
   document.getElementById('modal-averia-ingreso').classList.add('open');

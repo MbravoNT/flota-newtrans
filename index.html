@@ -1077,13 +1077,14 @@
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px;color:var(--accent);margin:0">Informe de Mantenciones Pendientes</div>
-          <button class="btn btn-ghost ml-auto" onclick="exportarPendientes()">⬇ Exportar Detalle</button>
+          <select class="filter-sel ml-auto" id="inf-pend-ciudad" onchange="renderPendientesFlota()"><option value="">Todas las ciudades</option></select>
+          <button class="btn btn-ghost" onclick="exportarPendientes()">⬇ Exportar Detalle</button>
           <button class="btn btn-primary" onclick="calcularPendientesFlota()">▶ Calcular</button>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Usa el kilometraje actual de NTFleet (cargado en la pestaña ⛽ Odómetros) para la flota de taller. Si el odómetro es menor al km del último ingreso, se usa el del ingreso.</div>
         <div class="table-wrap" style="max-height:480px;overflow-y:auto">
-          <table><thead><tr><th>Patente</th><th>Tipo Vehículo</th><th>KM Actual</th><th>Ult. Folio</th><th>Ult. Km Ing.</th><th>Fecha Ult. Ing.</th><th>Pendientes</th><th>Principales</th></tr></thead>
-          <tbody id="tbody-inf-pend"><tr><td colspan="8" class="empty-state">Presione Calcular</td></tr></tbody></table>
+          <table><thead><tr><th>Patente</th><th>Ciudad</th><th>Tipo Vehículo</th><th>KM Actual</th><th>Ult. Folio</th><th>Ult. Km Ing.</th><th>Fecha Ult. Ing.</th><th>Pendientes</th><th>Principales</th></tr></thead>
+          <tbody id="tbody-inf-pend"><tr><td colspan="9" class="empty-state">Presione Calcular</td></tr></tbody></table>
         </div>
       </div>
     </div>
@@ -2932,7 +2933,7 @@ async function imprimirFicha(pat, nuevo, opts = {}) {
 
 // ═══════════════════════════════════════════════════════════════
 // SALIDA DEL TALLER
-// Lista los ítems pendientes del folio abierto (premarcados), permite agregar
+// Lista los ítems pendientes del folio abierto (sin marcar: el mecánico marca lo realizado), permite agregar
 // preventivas y graba el desglose: esas marcas son las "X" del Informe de Mantención.
 // ═══════════════════════════════════════════════════════════════
 let salidaFolio = null;   // registro abierto del vehículo seleccionado
@@ -2964,7 +2965,7 @@ async function cargarSalida() {
   await cargarDesgloseVehiculo(pat);
   const { pendientes } = calcularItemsIngreso(itemsDeVehiculo(veh), desgloseCache[pat] || {}, Number(salidaFolio.km_mantencion) || 0);
   const pend = new Set(pendientes.map(p => p.codigo));
-  salidaItems = itemsDeVehiculo(veh).map(it => ({ ...it, en_lista: pend.has(it.codigo), marcado: pend.has(it.codigo) }));
+  salidaItems = itemsDeVehiculo(veh).map(it => ({ ...it, en_lista: pend.has(it.codigo), marcado: false })); // el mecánico marca lo realizado
   // Averías pendientes del vehículo: se listan sin marcar; el mecánico marca las reparadas
   await loadAverias();
   allAverias.filter(a => a.vehiculo_patente === pat && parseInt(a.estado) !== 2).forEach(a => salidaItems.push({
@@ -2995,7 +2996,7 @@ function agregarPreventivaSalida() {
   const cod = document.getElementById('salida-preventiva').value;
   const it = salidaItems.find(i => i.codigo === cod);
   if (!it) return;
-  it.en_lista = true; it.marcado = true;
+  it.en_lista = true; it.marcado = true; // la agrega porque la hizo; los pendientes propuestos entran sin marcar
   renderSalida();
 }
 
@@ -3113,6 +3114,11 @@ async function grabarRevTec() {
 let pendientesFlota = [];
 
 function initInformes() {
+  const selC = document.getElementById('inf-pend-ciudad'), cAct = selC.value;
+  selC.innerHTML = '<option value="">Todas las ciudades</option>' +
+    [...new Set(allVehiculos.filter(v => v.tipo_taller && v.ciudad).map(v => v.ciudad))].sort()
+      .map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+  selC.value = cAct;
   document.getElementById('inf-hist-patente').innerHTML = '<option value="">Seleccionar patente…</option>' +
     [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo_taller || v.tipo || '')}</option>`).join('');
@@ -3201,7 +3207,7 @@ async function exportarHistorial() {
 // Pendientes de toda la flota de taller: última realización por ítem (historial completo) vs km actual.
 async function calcularPendientesFlota() {
   const tbody = document.getElementById('tbody-inf-pend');
-  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="loader"></span></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><span class="loader"></span></td></tr>';
   try {
     await loadTiposMantencion();
     const regs = await fetchAll(() => sb.from('taller_registros').select('folio, vehiculo_patente, fecha_ingreso, km_mantencion').not('folio', 'is', null));
@@ -3224,22 +3230,32 @@ async function calcularPendientesFlota() {
       const { pendientes } = calcularItemsIngreso(itemsDeVehiculo(v), hecho[v.patente] || {}, km);
       return { v, u, km, pendientes };
     }).sort((a,b) => b.pendientes.length - a.pendientes.length);
-    tbody.innerHTML = pendientesFlota.map(({ v, u, km, pendientes }) => `<tr>
-      <td><strong>${escHtml(v.patente)}</strong></td><td>${escHtml(v.tipo_taller)}</td><td>${fmtKm(km)}</td>
+    renderPendientesFlota(true);
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--red)">Error: ${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+function pendientesFiltrados() {
+  const c = document.getElementById('inf-pend-ciudad').value;
+  return pendientesFlota.filter(p => !c || p.v.ciudad === c);
+}
+
+function renderPendientesFlota(calculado) {
+  if (!calculado && !pendientesFlota.length) return; // aún no se ha presionado Calcular
+  document.getElementById('tbody-inf-pend').innerHTML = pendientesFiltrados().map(({ v, u, km, pendientes }) => `<tr>
+      <td><strong>${escHtml(v.patente)}</strong></td><td>${escHtml(v.ciudad || '—')}</td><td>${escHtml(v.tipo_taller)}</td><td>${fmtKm(km)}</td>
       <td>${u?.folio || '—'}</td><td>${fmtKm(u?.km_mantencion)}</td><td>${fmtDate(u?.fecha_ingreso)}</td>
       <td><span class="badge ${pendientes.length ? 'badge-red' : 'badge-green'}">${pendientes.length}</span></td>
       <td style="font-size:12px;max-width:320px">${pendientes.slice(0,3).map(p => escHtml(p.nombre) + (p.kmPasados == null ? ' (sin registro)' : ' (+' + p.kmPasados.toLocaleString('es-CL') + ')')).join('<br>') || '—'}</td>
-    </tr>`).join('') || '<tr><td colspan="8" class="empty-state">Sin vehículos de taller</td></tr>';
-  } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${escHtml(e.message)}</td></tr>`;
-  }
+    </tr>`).join('') || '<tr><td colspan="9" class="empty-state">Sin vehículos de taller para esta ciudad</td></tr>';
 }
 
 async function exportarPendientes() {
   if (!pendientesFlota.length) { toast('Primero presione Calcular', 'error'); return; }
   if (typeof XLSX === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-  const rows = pendientesFlota.flatMap(({ v, u, km, pendientes }) => pendientes.map(p => ({
-    Patente: v.patente, 'Tipo Vehículo': v.tipo_taller, 'KM Actual': km, 'Ult. Folio': u?.folio || '',
+  const rows = pendientesFiltrados().flatMap(({ v, u, km, pendientes }) => pendientes.map(p => ({
+    Patente: v.patente, Ciudad: v.ciudad || '', 'Tipo Vehículo': v.tipo_taller, 'KM Actual': km, 'Ult. Folio': u?.folio || '',
     'Ult. Km Ingreso': Number(u?.km_mantencion) || '', Sección: p.seccion, Mantención: p.nombre,
     'Intervalo KM': p.intervalo, 'KM Pasados': p.kmPasados ?? 'Sin registro',
   })));

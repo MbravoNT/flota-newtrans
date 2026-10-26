@@ -472,7 +472,6 @@
   <button class="nav-btn" onclick="showTab('climatizacion');renderClima()">❄️ Climatización</button>
   <button class="nav-btn" onclick="showTab('odometros')">⛽ Odómetros</button>
   <button class="nav-btn" id="nav-taller" onclick="showTab('taller')">🔩 Taller</button>
-  <button class="nav-btn" id="nav-averias" onclick="showTab('averias')">⚠️ Averías</button>
   <button class="nav-btn" onclick="showTab('documentos')">📄 Documentos</button>
   <button class="nav-btn" id="nav-bitacora" onclick="showTab('bitacora')">🕒 Bitácora</button>
 </nav>
@@ -843,6 +842,7 @@
     <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);">
       <button class="nav-btn active" id="subtab-btn-ingreso" onclick="showSubTab('ingreso')" style="font-size:13px">📋 Ingreso a Taller</button>
       <button class="nav-btn" id="subtab-btn-salida" onclick="showSubTab('salida');cargarSalidaPatentes()" style="font-size:13px">🚪 Salida del Taller</button>
+      <button class="nav-btn" id="subtab-btn-averias" onclick="showSubTab('averias');loadAverias()" style="font-size:13px">⚠️ Averías</button>
       <button class="nav-btn" id="subtab-btn-revtec" onclick="showSubTab('revtec');initRevTec()" style="font-size:13px">📑 Revisión Técnica</button>
       <button class="nav-btn" id="subtab-btn-informes" onclick="showSubTab('informes');initInformes()" style="font-size:13px">📊 Informes</button>
       <button class="nav-btn" id="subtab-btn-historial" onclick="showSubTab('historial')" style="font-size:13px">📂 Historial</button>
@@ -1058,7 +1058,20 @@
             <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="inf-reimp-tipo" value="salida"> Salida</label>
           </div>
           <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="reimprimirFolio()">🖨 Imprimir</button></div>
-          <div style="font-size:12px;color:var(--muted);margin-top:10px">El Informe de Averías por patente está en la pestaña ⚠️ Averías (buscar patente).</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;grid-column:1 / -1;">
+          <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px;color:var(--accent)">Informe de Averías</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <div class="form-group"><label>Patente del Vehículo</label><select id="inf-av-patente"></select></div>
+            <div class="form-group"><label>Estado</label>
+              <select id="inf-av-estado"><option value="">Todos</option><option value="0">Pendiente</option><option value="1">En Proceso</option><option value="2">Resuelto</option></select></div>
+            <div class="form-group"><label>Período</label>
+              <select id="inf-av-periodo"><option value="12">Últimos 12 meses</option><option value="">Histórico completo</option></select></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="exportarInformeAverias()">⬇ Exportar Excel</button>
+            <button class="btn btn-primary" onclick="verInformeAverias()">📄 Ver / Imprimir</button>
+          </div>
         </div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">
@@ -1118,54 +1131,48 @@
         </table>
       </div>
     </div>
-  </div>
-
-  <!-- ═══════════════ TAB: AVERÍAS ═══════════════ -->
-  <div id="tab-averias" class="tab">
-    <div class="page-title">
-      Averías
-      <span class="sub">Registro y seguimiento de fallas</span>
-    </div>
-
-    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
-      <div class="stat-card"><div class="stat-label">Total Averías</div><div class="stat-value" id="sa-total">—</div></div>
-      <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="sa-pendiente" style="color:var(--red)">—</div></div>
-      <div class="stat-card"><div class="stat-label">En Proceso</div><div class="stat-value" id="sa-proceso" style="color:var(--orange)">—</div></div>
-      <div class="stat-card"><div class="stat-label">Resueltas</div><div class="stat-value" id="sa-resuelto" style="color:var(--green)">—</div></div>
-    </div>
-
-    <div class="toolbar">
-      <input class="search-input" id="search-averias" type="text" placeholder="Buscar patente, descripción…" oninput="filterAverias()" />
-      <select class="filter-sel" id="filter-averias-estado" onchange="filterAverias()">
-        <option value="">Todos los estados</option>
-        <option value="0">Pendiente</option>
-        <option value="1">En Proceso</option>
-        <option value="2">Resuelto</option>
-      </select>
-      <button class="btn btn-ghost" onclick="loadAverias()">↺ Actualizar</button>
-      <button class="btn btn-primary ml-auto" id="btn-nuevo-averia" onclick="openIngresoAveria()">+ Ingreso de Averías</button>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Folio</th>
-            <th>Patente</th>
-            <th>Ciudad</th>
-            <th>Fecha Ingreso</th>
-            <th>Descripción</th>
-            <th>Sección</th>
-            <th>Mecánico</th>
-            <th>Estado</th>
-            <th>Fecha Resolución</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-averias">
-          <tr><td colspan="10" class="empty-state"><span class="loader"></span></td></tr>
-        </tbody>
-      </table>
+    <!-- SUB-TAB: AVERÍAS -->
+    <div id="subtab-averias" style="display:none;">
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;">
+        <div class="stat-card"><div class="stat-label">Total Averías</div><div class="stat-value" id="sa-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="sa-pendiente" style="color:var(--red)">—</div></div>
+        <div class="stat-card"><div class="stat-label">En Proceso</div><div class="stat-value" id="sa-proceso" style="color:var(--orange)">—</div></div>
+        <div class="stat-card"><div class="stat-label">Resueltas</div><div class="stat-value" id="sa-resuelto" style="color:var(--green)">—</div></div>
+      </div>
+  
+      <div class="toolbar">
+        <input class="search-input" id="search-averias" type="text" placeholder="Buscar patente, descripción…" oninput="filterAverias()" />
+        <select class="filter-sel" id="filter-averias-estado" onchange="filterAverias()">
+          <option value="">Todos los estados</option>
+          <option value="0">Pendiente</option>
+          <option value="1">En Proceso</option>
+          <option value="2">Resuelto</option>
+        </select>
+        <button class="btn btn-ghost" onclick="loadAverias()">↺ Actualizar</button>
+        <button class="btn btn-primary ml-auto" id="btn-nuevo-averia" onclick="openIngresoAveria()">+ Ingreso de Averías</button>
+      </div>
+  
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Patente</th>
+              <th>Ciudad</th>
+              <th>Fecha Ingreso</th>
+              <th>Descripción</th>
+              <th>Sección</th>
+              <th>Mecánico</th>
+              <th>Estado</th>
+              <th>Fecha Resolución</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-averias">
+            <tr><td colspan="10" class="empty-state"><span class="loader"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1601,15 +1608,14 @@ async function onLogin(user) {
 
     // Control de visibilidad de pestañas según rol
     if (perfil.rol === 'Operador') {
-      // Operador: no ve Odómetros, Taller ni Averías
-      ['Odómetros','Taller','Averías'].forEach(label => {
+      // Operador: no ve Odómetros ni Taller (Averías está dentro de Taller)
+      ['Odómetros','Taller'].forEach(label => {
         document.querySelectorAll('.nav-btn').forEach(b => {
           if (b.textContent.includes(label)) b.style.display = 'none';
         });
       });
       document.getElementById('tab-odometros').style.display = 'none';
       document.getElementById('tab-taller').style.display = 'none';
-      document.getElementById('tab-averias').style.display = 'none';
     } else if (perfil.rol === 'Mecánico') {
       // Mecánico: ve Vehículos, Mantención, Documentos (solo ver), Taller y Averías
       // Ocultar Ciudades y Odómetros
@@ -2665,7 +2671,7 @@ async function loadTiposMantencion() {
 }
 
 function showSubTab(name) {
-  ['ingreso','salida','revtec','informes','historial'].forEach(n => {
+  ['ingreso','salida','averias','revtec','informes','historial'].forEach(n => {
     document.getElementById('subtab-' + n).style.display = n === name ? 'block' : 'none';
     const btn = document.getElementById('subtab-btn-' + n);
     if (btn) btn.classList.toggle('active', n === name);
@@ -3110,6 +3116,62 @@ function initInformes() {
   document.getElementById('inf-hist-patente').innerHTML = '<option value="">Seleccionar patente…</option>' +
     [...allVehiculos].sort((a,b) => a.patente.localeCompare(b.patente))
       .map(v => `<option value="${escHtml(v.patente)}">${escHtml(v.patente)} · ${escHtml(v.tipo_taller || v.tipo || '')}</option>`).join('');
+  document.getElementById('inf-av-patente').innerHTML = '<option value="">Toda la flota</option>' +
+    document.getElementById('inf-hist-patente').innerHTML.replace(/^<option value="">[^<]*<\/option>/, '');
+}
+
+// ─── Informe de Averías (independiente del historial de mantención) ───
+const ESTADO_AVERIA = ['Pendiente', 'En Proceso', 'Resuelto'];
+async function datosInformeAverias() {
+  await loadAverias();
+  const pat = document.getElementById('inf-av-patente').value;
+  const est = document.getElementById('inf-av-estado').value;
+  const meses = document.getElementById('inf-av-periodo').value;
+  const desde = meses ? new Date(new Date().setMonth(new Date().getMonth() - Number(meses))).toLocaleDateString('en-CA') : '';
+  return allAverias.filter(a =>
+    (!pat || a.vehiculo_patente === pat) &&
+    (est === '' || String(parseInt(a.estado) || 0) === est) &&
+    (!desde || (a.fecha_ingreso || '') >= desde));
+}
+
+async function exportarInformeAverias() {
+  try {
+    if (typeof XLSX === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const ciudad = {}; allVehiculos.forEach(v => { ciudad[v.patente] = v.ciudad; });
+    const rows = (await datosInformeAverias()).map(a => ({
+      'Patente': a.vehiculo_patente, 'Ciudad': ciudad[a.vehiculo_patente] || '', 'Fecha Ingreso': fmtDate(a.fecha_ingreso),
+      'Descripción': a.descripcion || '', 'Sección': a.seccion || '', 'Estado': ESTADO_AVERIA[parseInt(a.estado) || 0],
+      'Folio Reparación': a.folio || '', 'Fecha Reparación': a.fecha_realizado ? fmtDate(a.fecha_realizado) : '',
+      'Mecánico': a.mecanico || '', 'Observaciones': a.observaciones || '' }));
+    if (!rows.length) { toast('No hay averías con esos filtros', 'error'); return; }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Averías');
+    XLSX.writeFile(wb, `Informe_Averias_${new Date().toLocaleDateString('en-CA')}.xlsx`);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function verInformeAverias() {
+  const win = window.open('', '_blank'); // antes del await para que el navegador no la bloquee
+  if (!win) { toast('Permite las ventanas emergentes para imprimir', 'error'); return; }
+  const list = await datosInformeAverias();
+  const e = escHtml, sel = id => document.getElementById(id);
+  const txt = id => sel(id).options[sel(id).selectedIndex].text;
+  const n = k => list.filter(a => (parseInt(a.estado) || 0) === k).length;
+  win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe de Averías</title><style>
+    body{font-family:Arial,sans-serif;font-size:12px;margin:20px} h1{font-size:16px;margin:0 0 6px}
+    table{border-collapse:collapse;width:100%;margin-top:8px} th,td{border:1px solid #999;padding:3px 6px;vertical-align:top}
+    th{background:#f57c00;color:#fff;text-align:left} .res{margin:8px 0}
+    @page{size:A4 landscape} @media print{button{display:none}}
+  </style></head><body>
+    <button onclick="print()" style="float:right;padding:6px 14px">🖨 Imprimir</button>
+    <h1>Informe de Averías</h1>
+    <div>Patente: <b>${e(txt('inf-av-patente'))}</b> · Estado: <b>${e(txt('inf-av-estado'))}</b> · Período: <b>${e(txt('inf-av-periodo'))}</b> · Emitido: <b>${fmtDate(new Date().toLocaleDateString('en-CA'))}</b></div>
+    <div class="res">Total: <b>${list.length}</b> · Pendientes: <b>${n(0)}</b> · En proceso: <b>${n(1)}</b> · Resueltas: <b>${n(2)}</b></div>
+    <table><thead><tr><th>Patente</th><th>Fecha Ingreso</th><th>Descripción</th><th>Sección</th><th>Estado</th><th>Folio Rep.</th><th>Fecha Rep.</th><th>Mecánico</th><th>Observaciones</th></tr></thead><tbody>
+      ${list.map(a => `<tr><td>${e(a.vehiculo_patente || '')}</td><td>${fmtDate(a.fecha_ingreso)}</td><td>${e(a.descripcion || '')}</td><td>${e(a.seccion || '')}</td><td>${ESTADO_AVERIA[parseInt(a.estado) || 0]}</td><td>${a.folio || ''}</td><td>${a.fecha_realizado ? fmtDate(a.fecha_realizado) : ''}</td><td>${e(a.mecanico || '')}</td><td>${e(a.observaciones || '')}</td></tr>`).join('') || '<tr><td colspan="9">Sin averías con esos filtros</td></tr>'}
+    </tbody></table>
+  </body></html>`);
+  win.document.close();
 }
 
 function periodoHistorial() { const v = document.getElementById('inf-hist-periodo').value; return v ? Number(v) : null; }

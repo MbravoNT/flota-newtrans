@@ -2877,6 +2877,7 @@ async function grabarIngreso() {
     await imprimirFicha(pat, { folio, fecha, km });
     limpiarIngreso();
     await loadTaller();
+    await loadVehiculos(); // el trigger de la base dejó el vehículo "En mantención"
   } catch(e) {
     toast(e.message, 'error');
   } finally {
@@ -3078,6 +3079,7 @@ async function grabarSalida() {
     toast(`✅ Salida registrada — ${salidaFolio.vehiculo_patente} · Folio ${salidaFolio.folio}`);
     await cargarSalidaPatentes();
     await loadTaller();
+    await loadVehiculos(); // el trigger de la base devolvió el vehículo a "Operativo"
   } catch(e) {
     toast(e.message, 'error');
   } finally {

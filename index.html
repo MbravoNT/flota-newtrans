@@ -470,7 +470,7 @@
   <button class="nav-btn active" onclick="showTab('vehiculos')">🚛 Vehículos</button>
   <button class="nav-btn" onclick="showTab('mantencion')">🔧 Mantención</button>
   <button class="nav-btn" onclick="showTab('ciudades')">📍 Ciudades</button>
-  <button class="nav-btn" onclick="showTab('climatizacion');renderClima()">❄️ Climatización</button>
+  <button class="nav-btn" onclick="showTab('climatizacion');renderClima();loadRevisiones()">❄️ Climatización</button>
   <button class="nav-btn" onclick="showTab('odometros')">⛽ Odómetros</button>
   <button class="nav-btn" id="nav-taller" onclick="showTab('taller')">🔩 Taller</button>
   <button class="nav-btn" onclick="showTab('documentos')">📄 Documentos</button>
@@ -676,11 +676,36 @@
             <th>Ciudad</th>
             <th>Equipo</th>
             <th>Estado</th>
+            <th>Temp.</th>
             <th>Observación</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-clima-patentes"></tbody>
+      </table>
+    </div>
+
+    <!-- Historial RG-57 -->
+    <div class="page-title" style="margin-top:28px;font-size:18px">
+      Revisiones de Vehículo (SGC-NEW-RG-57)
+      <span class="sub">Checklist diario antes de salir · conforme si temperatura del equipo entre 15 y 25 °C</span>
+    </div>
+    <div class="toolbar">
+      <label style="align-self:center">Desde</label><input type="date" id="rev-desde" onchange="loadRevisiones()" />
+      <label style="align-self:center">Hasta</label><input type="date" id="rev-hasta" onchange="loadRevisiones()" />
+      <select class="filter-sel" id="rev-f-res" onchange="renderRevisiones()">
+        <option value="">Todos los resultados</option>
+        <option value="si">Conforme</option>
+        <option value="no">No conforme</option>
+      </select>
+      <button class="btn btn-ghost" onclick="exportarRevisionesExcel()">⬇ Excel</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Patente</th><th>Ciudad</th><th>Km</th><th>Conductor</th><th>Climatización</th><th>Temp.</th><th>Resultado</th><th>Observaciones</th><th>Registró</th></tr>
+        </thead>
+        <tbody id="tbody-revisiones"></tbody>
       </table>
     </div>
   </div>
@@ -1334,6 +1359,43 @@
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-clima')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveClima()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL REVISIÓN DE VEHÍCULO (SGC-NEW-RG-57) ═══ -->
+<div class="modal-overlay" id="modal-rev">
+  <div class="modal" style="width:760px">
+    <h3>📋 Revisión de Vehículo · <span id="rev-patente"></span> <span style="font-size:12px;color:var(--muted)">SGC-NEW-RG-57</span></h3>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="form-group"><label>Fecha *</label><input type="date" id="rev-fecha" /></div>
+      <div class="form-group"><label>Kilometraje actual *</label><input type="number" id="rev-km" min="0" /></div>
+      <div class="form-group"><label>Nombre del conductor *</label><input type="text" id="rev-conductor" maxlength="80" /></div>
+      <div class="form-group full" style="font-size:12px;color:var(--muted)" id="rev-modelo"></div>
+
+      <div class="form-group full"><label style="color:var(--accent);font-weight:700">1.- DOCUMENTACIÓN</label></div>
+      <div class="form-group"><label>Revisión Técnica *</label><select id="rev-rt"><option value="">—</option><option value="true">Sí</option><option value="false">No</option></select><input type="date" id="rev-rt-vence" title="Vencimiento" /></div>
+      <div class="form-group"><label>SOAP *</label><select id="rev-soap"><option value="">—</option><option value="true">Sí</option><option value="false">No</option></select></div>
+      <div class="form-group"><label>Gases *</label><select id="rev-gases"><option value="">—</option><option value="true">Sí</option><option value="false">No</option></select><input type="date" id="rev-gases-vence" title="Vencimiento" /></div>
+
+      <div class="form-group full" style="flex-direction:row;justify-content:space-between;align-items:center">
+        <label style="color:var(--accent);font-weight:700">2.- ESTADO DEL VEHÍCULO · 3.- ESTADO DEL CAJÓN</label>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="revTodoOk()">✓ Todo OK</button>
+      </div>
+      <div class="form-group full"><div id="rev-items" class="form-grid" style="grid-template-columns:1fr 1fr 1fr"></div></div>
+
+      <div class="form-group full"><label style="color:var(--accent);font-weight:700">4.- EQUIPO DE CLIMATIZACIÓN</label></div>
+      <div class="form-group"><label>Estado *</label>
+        <select id="rev-clima" onchange="revClimaCheck()"><option value="">—</option><option>Operativo</option><option>Con falla</option><option>Sin equipo</option></select></div>
+      <div class="form-group"><label>Temperatura (°C) *</label><input type="number" step="0.1" id="rev-temp" oninput="revClimaCheck()" /></div>
+      <div class="form-group" id="rev-temp-msg" style="font-size:12px;justify-content:flex-end"></div>
+
+      <div class="form-group full"><label id="rev-obs-label">Observaciones</label>
+        <textarea id="rev-obs" placeholder="Detalle de lo no conforme y acción tomada…"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rev')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRevision()">Guardar revisión</button>
     </div>
   </div>
 </div>
@@ -2256,10 +2318,13 @@ function renderClimaPatentes() {
       <td>${escHtml(v.ciudad) || '—'}</td>
       <td>${v.clima_equipo ? escHtml(v.clima_equipo) : '<span class="badge badge-orange">Sin registrar</span>'}</td>
       <td>${e === 'Operativo' || e === 'Con falla' ? `<span class="badge ${badgeEstado[e]}">${e === 'Con falla' ? '🔴 ' : '🟢 '}${e}</span>` : '—'}</td>
+      <td>${v.clima_temp != null ? `<span style="color:${climaTempOk(v.clima_temp) ? 'var(--green)' : 'var(--red)'}">${v.clima_temp} °C</span>` : '—'}</td>
       <td style="max-width:280px">${escHtml(v.clima_obs) || '—'}</td>
-      <td><button class="btn btn-sm" onclick="openClima('${escHtml(v.patente)}')" title="Actualizar climatización">✏️</button></td>
+      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openRevision('${escHtml(v.patente)}')" title="Revisión de vehículo RG-57">📋</button>
+        <button class="btn btn-sm" onclick="openClima('${escHtml(v.patente)}')" title="Actualizar climatización">✏️</button></td>
     </tr>`;
-  }).join('') : '<tr><td colspan="7" class="empty-state">Sin patentes para el filtro</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty-state">Sin patentes para el filtro</td></tr>';
+  renderRevisiones();
 }
 
 function openClima(patente) {
@@ -2308,6 +2373,163 @@ async function saveClima() {
   closeModal('modal-clima');
   toast(`Climatización de ${climaPatenteActual} actualizada`);
   renderClima();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REVISIÓN DE VEHÍCULO SGC-NEW-RG-57 (tabla revisiones_vehiculo)
+// Un trigger en BD actualiza clima_* del vehículo con la sección 4.
+// ═══════════════════════════════════════════════════════════════
+const CLIMA_TEMP_MIN = 15, CLIMA_TEMP_MAX = 25;   // criterio de conformidad
+const RG57_ITEMS = ['Nivel de aceite','Nivel líquido de freno','Agua','Neumáticos delanteros','Neumáticos traseros',
+  'Luces altas','Luces bajas','Intermitentes','Luz de retroceso','3ª luz','Cajón limpio','Puertas del cajón'];
+let revPatenteActual = null, allRevisiones = [];
+
+const climaTempOk = t => t >= CLIMA_TEMP_MIN && t <= CLIMA_TEMP_MAX;
+const hoyISO = () => new Date().toLocaleDateString('en-CA');
+
+function openRevision(patente) {
+  const v = allVehiculos.find(x => x.patente === patente);
+  if (!v) return;
+  revPatenteActual = patente;
+  document.getElementById('rev-patente').textContent = patente;
+  document.getElementById('rev-modelo').textContent =
+    [v.tipo, v.marca, v.modelo, v.anio, v.ciudad].filter(Boolean).join(' · ') + (v.odometro ? ` · Último km registrado: ${fmtKm(v.odometro)}` : '');
+  const f = document.getElementById('rev-fecha'); f.value = f.max = hoyISO();
+  document.getElementById('rev-km').value = v.odometro || '';
+  ['rev-conductor','rev-rt','rev-rt-vence','rev-soap','rev-gases','rev-gases-vence','rev-temp','rev-obs']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('rev-clima').value = v.clima_equipo === 'Sin equipo' ? 'Sin equipo' : '';
+  document.getElementById('rev-items').innerHTML = RG57_ITEMS.map((it, i) => `
+    <div class="form-group"><label>${it} *</label>
+      <select data-item="${it}" id="rev-it-${i}" onchange="revClimaCheck()"><option value="">—</option><option>OK</option><option>No OK</option></select></div>`).join('');
+  revClimaCheck();
+  document.getElementById('modal-rev').classList.add('open');
+}
+
+function revTodoOk() {
+  document.querySelectorAll('#rev-items select').forEach(s => s.value = 'OK');
+  revClimaCheck();
+}
+
+// Calcula conformidad y fuerza "Con falla" si la temperatura está fuera de rango.
+function revEvaluar() {
+  const g = id => document.getElementById(id).value;
+  const fecha = g('rev-fecha');
+  const clima = document.getElementById('rev-clima');
+  const tempTxt = g('rev-temp'), temp = tempTxt === '' ? null : Number(tempTxt);
+  const conEquipo = clima.value && clima.value !== 'Sin equipo';
+  const msg = document.getElementById('rev-temp-msg');
+  document.getElementById('rev-temp').disabled = clima.value === 'Sin equipo';
+  if (clima.value === 'Sin equipo') document.getElementById('rev-temp').value = '';
+  if (conEquipo && temp != null && !climaTempOk(temp) && clima.value === 'Operativo') clima.value = 'Con falla';
+  msg.innerHTML = !conEquipo || temp == null ? `Rango conforme: ${CLIMA_TEMP_MIN}–${CLIMA_TEMP_MAX} °C`
+    : climaTempOk(temp) ? '<span style="color:var(--green)">🟢 Dentro de rango</span>'
+    : '<span style="color:var(--red)">🔴 Fuera de rango → Con falla</span>';
+  const items = [...document.querySelectorAll('#rev-items select')];
+  const vencido = d => d && d < fecha;
+  const motivos = [
+    ...items.filter(s => s.value === 'No OK').map(s => s.dataset.item),
+    ...(g('rev-rt') === 'false' || vencido(g('rev-rt-vence')) ? ['Revisión Técnica'] : []),
+    ...(g('rev-soap') === 'false' ? ['SOAP'] : []),
+    ...(g('rev-gases') === 'false' || vencido(g('rev-gases-vence')) ? ['Gases'] : []),
+    ...(clima.value === 'Con falla' ? ['Climatización'] : []),
+  ];
+  document.getElementById('rev-obs-label').textContent = motivos.length
+    ? `Observaciones * (no conforme: ${motivos.join(', ')})` : 'Observaciones';
+  return { items, temp, conEquipo, motivos };
+}
+const revClimaCheck = () => { revEvaluar(); };
+
+async function saveRevision() {
+  const g = id => document.getElementById(id).value;
+  const { items, temp, conEquipo, motivos } = revEvaluar();
+  const fecha = g('rev-fecha'), km = g('rev-km'), conductor = g('rev-conductor').trim(), obs = g('rev-obs').trim();
+  const err = m => toast(m, 'error');
+  if (!fecha || fecha > hoyISO()) return err('Fecha inválida');
+  if (km === '' || Number(km) < 0) return err('Indica el kilometraje actual');
+  if (!conductor) return err('Indica el nombre del conductor');
+  if (!g('rev-rt') || !g('rev-soap') || !g('rev-gases')) return err('Completa la documentación');
+  if (items.some(s => !s.value)) return err('Completa todos los ítems del estado del vehículo y cajón');
+  if (!g('rev-clima')) return err('Indica el estado del equipo de climatización');
+  if (conEquipo && temp == null) return err('Registra la temperatura del equipo');
+  if (motivos.length && !obs) return err('Detalla en Observaciones lo no conforme');
+
+  const v = allVehiculos.find(x => x.patente === revPatenteActual);
+  const payload = {
+    patente: revPatenteActual, ciudad: v?.ciudad || null, fecha, km: Number(km), conductor,
+    rt_vigente: g('rev-rt') === 'true', rt_vence: g('rev-rt-vence') || null,
+    soap_vigente: g('rev-soap') === 'true',
+    gases_vigente: g('rev-gases') === 'true', gases_vence: g('rev-gases-vence') || null,
+    checklist: Object.fromEntries(items.map(s => [s.dataset.item, s.value])),
+    clima_estado: conEquipo ? g('rev-clima') : null, temperatura: conEquipo ? temp : null,
+    conforme: !motivos.length, obs: obs || null,
+    usuario: currentPerfil?.nombre || currentUser?.email || null,
+  };
+  const { error } = await sb.from('revisiones_vehiculo').insert(payload);
+  if (error) return err(error.message);
+  if (v) Object.assign(v, {   // reflejo local de lo que hace el trigger
+    clima_equipo: conEquipo ? 'Con equipo' : 'Sin equipo', clima_estado: payload.clima_estado, clima_temp: payload.temperatura,
+    clima_obs: payload.clima_estado === 'Con falla' ? obs : v.clima_obs, clima_fecha: new Date().toISOString(),
+    clima_usuario: payload.usuario + ' (RG-57)' });
+  closeModal('modal-rev');
+  toast(`Revisión de ${revPatenteActual} registrada${payload.conforme ? '' : ' · NO CONFORME'}`, payload.conforme ? 'success' : 'error');
+  renderClima();
+  loadRevisiones();
+}
+
+async function loadRevisiones() {
+  const d = document.getElementById('rev-desde'), h = document.getElementById('rev-hasta');
+  if (!d.value) d.value = new Date(Date.now() - 30 * 864e5).toLocaleDateString('en-CA');
+  if (!h.value) h.value = hoyISO();
+  const { data, error } = await sb.from('revisiones_vehiculo').select('*')
+    .gte('fecha', d.value).lte('fecha', h.value).order('fecha', { ascending: false }).order('creado_en', { ascending: false });
+  if (error) { toast(error.message, 'error'); return; }
+  allRevisiones = data || [];
+  renderRevisiones();
+}
+
+function revisionesFiltradas() {
+  const q = document.getElementById('clima-q').value.trim().toUpperCase();
+  const ciudad = document.getElementById('clima-f-ciudad').value;
+  const res = document.getElementById('rev-f-res').value;
+  return allRevisiones.filter(r =>
+    (!q || r.patente.includes(q)) && (!ciudad || r.ciudad === ciudad) &&
+    (!res || r.conforme === (res === 'si')));
+}
+
+function renderRevisiones() {
+  const tb = document.getElementById('tbody-revisiones');
+  if (!tb) return;
+  const lista = revisionesFiltradas();
+  tb.innerHTML = lista.length ? lista.map(r => `<tr>
+    <td>${fmtDate(r.fecha)}</td><td><strong>${escHtml(r.patente)}</strong></td><td>${escHtml(r.ciudad) || '—'}</td>
+    <td>${fmtKm(r.km)}</td><td>${escHtml(r.conductor)}</td>
+    <td>${r.clima_estado ? `<span class="badge ${r.clima_estado === 'Operativo' ? 'badge-green' : 'badge-red'}">${r.clima_estado}</span>` : 'Sin equipo'}</td>
+    <td>${r.temperatura != null ? r.temperatura + ' °C' : '—'}</td>
+    <td><span class="badge ${r.conforme ? 'badge-green' : 'badge-red'}">${r.conforme ? 'Conforme' : 'No conforme'}</span></td>
+    <td style="max-width:260px">${escHtml(r.obs) || '—'}</td>
+    <td style="font-size:12px">${escHtml(r.usuario)}<br><span style="color:var(--muted)">${fmtDateHora(r.creado_en)}</span></td>
+  </tr>`).join('') : '<tr><td colspan="10" class="empty-state">Sin revisiones en el período</td></tr>';
+}
+
+async function exportarRevisionesExcel() {
+  try {
+    const lista = revisionesFiltradas();
+    if (!lista.length) { toast('No hay revisiones con esos filtros', 'error'); return; }
+    if (typeof XLSX === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const sn = b => b == null ? '' : b ? 'Sí' : 'No';
+    const rows = lista.map(r => ({
+      'Fecha': fmtDate(r.fecha), 'Patente': r.patente, 'Ciudad': r.ciudad || '', 'Km': r.km, 'Conductor': r.conductor,
+      'Revisión Técnica': sn(r.rt_vigente), 'Venc. RT': r.rt_vence ? fmtDate(r.rt_vence) : '', 'SOAP': sn(r.soap_vigente),
+      'Gases': sn(r.gases_vigente), 'Venc. Gases': r.gases_vence ? fmtDate(r.gases_vence) : '',
+      ...Object.fromEntries(RG57_ITEMS.map(it => [it, r.checklist?.[it] || ''])),
+      'Climatización': r.clima_estado || 'Sin equipo', 'Temperatura °C': r.temperatura ?? '',
+      'Resultado': r.conforme ? 'Conforme' : 'No conforme', 'Observaciones': r.obs || '',
+      'Registró': r.usuario || '', 'Fecha registro': fmtDateHora(r.creado_en) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'RG-57');
+    XLSX.writeFile(wb, `RG-57_Revisiones_${hoyISO()}.xlsx`);
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 // ─── HELPERS ───────────────────────────────────────────────────

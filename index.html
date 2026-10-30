@@ -498,7 +498,7 @@
         <div class="stat-value" id="s-activos" style="color:var(--green)">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">En Mantención</div>
+        <div class="stat-label">En Mantención / Bloqueados</div>
         <div class="stat-value" id="s-mant" style="color:var(--orange)">—</div>
       </div>
       <div class="stat-card">
@@ -521,6 +521,7 @@
         <option value="">Todos los estados</option>
         <option>Operativo</option>
         <option>En mantención</option>
+        <option>Bloqueado</option>
         <option>Inactivo</option>
       </select>
       <select class="filter-sel" id="filter-ciudad-veh" onchange="filterVehiculos()">
@@ -867,8 +868,8 @@
     <!-- Sub-tabs taller -->
     <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);">
       <button class="nav-btn active" id="subtab-btn-ingreso" onclick="showSubTab('ingreso')" style="font-size:13px">📋 Ingreso a Taller</button>
-      <button class="nav-btn" id="subtab-btn-salida" onclick="showSubTab('salida');cargarSalidaPatentes()" style="font-size:13px">🚪 Salida del Taller</button>
       <button class="nav-btn" id="subtab-btn-averias" onclick="showSubTab('averias');loadAverias()" style="font-size:13px">⚠️ Averías</button>
+      <button class="nav-btn" id="subtab-btn-salida" onclick="showSubTab('salida');cargarSalidaPatentes()" style="font-size:13px">🚪 Salida del Taller</button>
       <button class="nav-btn" id="subtab-btn-revtec" onclick="showSubTab('revtec');initRevTec()" style="font-size:13px">📑 Revisión Técnica</button>
       <button class="nav-btn" id="subtab-btn-informes" onclick="showSubTab('informes');initInformes()" style="font-size:13px">📊 Informes</button>
       <button class="nav-btn" id="subtab-btn-historial" onclick="showSubTab('historial')" style="font-size:13px">📂 Historial</button>
@@ -891,9 +892,10 @@
           </div>
           <div class="form-group">
             <label>Motivo Ingreso</label>
-            <select id="ingreso-motivo" onchange="document.getElementById('ingreso-reparacion').style.display = this.value === 'Reparación' ? 'block' : 'none'">
+            <select id="ingreso-motivo" onchange="document.getElementById('ingreso-reparacion').style.display = MOTIVOS_CON_AVERIAS.includes(this.value) ? 'block' : 'none'">
               <option>Mantención</option>
               <option>Reparación</option>
+              <option>Avería</option>
               <option>Revisión</option>
               <option>Otro</option>
             </select>
@@ -1314,6 +1316,7 @@
           <option value="">Seleccionar…</option>
           <option>Operativo</option>
           <option>En mantención</option>
+          <option>Bloqueado</option>
           <option>Inactivo</option>
         </select>
       </div>
@@ -1865,6 +1868,7 @@ function estadoBadge(e) {
   const map = {
     'Operativo':      'badge-green',
     'En mantención':  'badge-orange',
+    'Bloqueado':      'badge-red',
   };
   return `<span class="badge ${map[e] || 'badge-muted'}">${e || '—'}</span>`;
 }
@@ -1935,8 +1939,8 @@ function updateStats() {
     : allVehiculos;
   document.getElementById('s-total').textContent   = lista.length;
   document.getElementById('s-activos').textContent = lista.filter(v => v.estado === 'Operativo').length;
-  document.getElementById('s-mant').textContent    = lista.filter(v => v.estado === 'En mantención').length;
-  document.getElementById('s-inact').textContent   = lista.filter(v => v.estado !== 'Operativo' && v.estado !== 'En mantención').length;
+  document.getElementById('s-mant').textContent    = lista.filter(v => v.estado === 'En mantención' || v.estado === 'Bloqueado').length;
+  document.getElementById('s-inact').textContent   = lista.filter(v => v.estado === 'Inactivo' || !v.estado).length;
 }
 
 function openModalVeh() {
@@ -2221,7 +2225,7 @@ async function renderCiudades() {
     if (!k) return;
     countMap[k] = (countMap[k] || 0) + 1;
     if (v.estado === 'Operativo')     operMap[k] = (operMap[k] || 0) + 1;
-    if (v.estado === 'En mantención') mantMap[k] = (mantMap[k] || 0) + 1;
+    if (v.estado === 'En mantención' || v.estado === 'Bloqueado') mantMap[k] = (mantMap[k] || 0) + 1;
   });
 
   // Próximos y vencidos desde mantenciones (misma fórmula que la tabla de Mantención)
@@ -3057,6 +3061,9 @@ function limpiarIngreso() {
   ultimoIngreso = null;
 }
 
+// Motivos que exigen detallar averías; 'Avería' además deja el vehículo Bloqueado (trigger en la base)
+const MOTIVOS_CON_AVERIAS = ['Reparación', 'Avería'];
+
 async function grabarIngreso() {
   const pat    = document.getElementById('ingreso-patente').value;
   const km     = parseInt(document.getElementById('ingreso-km').value);
@@ -3070,10 +3077,11 @@ async function grabarIngreso() {
   if (ultimoIngreso && km < Number(ultimoIngreso.km_mantencion)) {
     toast(`El kilometraje (${km.toLocaleString('es-CL')}) es menor al del último ingreso (${Number(ultimoIngreso.km_mantencion).toLocaleString('es-CL')})`, 'error'); return;
   }
-  // Ingreso por reparación: cada línea es una avería que queda pendiente en ⚠️ Averías y en la Salida
-  const averias = motivo === 'Reparación'
+  // Ingreso por reparación o avería: cada línea es una avería que queda pendiente en ⚠️ Averías y en la Salida
+  const conAverias = MOTIVOS_CON_AVERIAS.includes(motivo);
+  const averias = conAverias
     ? document.getElementById('ingreso-averias').value.split('\n').map(l => l.trim()).filter(Boolean) : [];
-  if (motivo === 'Reparación' && !averias.length) { toast('Ingresa al menos una avería a reparar', 'error'); return; }
+  if (conAverias && !averias.length) { toast('Ingresa al menos una avería a reparar', 'error'); return; }
   const larga = averias.find(a => a.length > 70);
   if (larga) { toast(`Avería de más de 70 caracteres: "${larga.slice(0, 30)}…"`, 'error'); return; }
 
@@ -3099,7 +3107,7 @@ async function grabarIngreso() {
     await imprimirFicha(pat, { folio, fecha, km });
     limpiarIngreso();
     await loadTaller();
-    await loadVehiculos(); // el trigger de la base dejó el vehículo "En mantención"
+    await loadVehiculos(); // el trigger de la base dejó el vehículo "En mantención" (o "Bloqueado" si es Avería)
   } catch(e) {
     toast(e.message, 'error');
   } finally {

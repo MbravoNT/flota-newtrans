@@ -3935,6 +3935,14 @@ async function saveAveria() {
     estado:           parseInt(document.getElementById('averia-estado').value) || 0,
   };
   try {
+    // Con folio abierto, la avería se cierra en la Salida del Taller (queda asociada al folio y al mecánico)
+    const yaConFolio = id && allAverias.find(x => String(x.id) === String(id))?.folio;
+    if (payload.estado === 2 && !yaConFolio) {
+      const { data: abierto, error: eT } = await sb.from('taller_registros').select('folio')
+        .eq('vehiculo_patente', pat).is('fecha_egreso', null).limit(1);
+      if (eT) throw eT;
+      if (abierto?.length) { toast(`Esta avería se cierra en la Salida del Taller (folio ${abierto[0].folio}). Déjala Pendiente o En Proceso.`, 'error'); return; }
+    }
     let error;
     if (id) {
       ({ error } = await sb.from('averias').update(payload).eq('id', id));

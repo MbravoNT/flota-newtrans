@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Newtrans · Gestión de Flota</title>
+  <script>try{if(localStorage.getItem('nt-tema')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -24,6 +25,23 @@
       --font-head: 'Syne', sans-serif;
       --font-body: 'DM Sans', sans-serif;
     }
+    /* Tema claro (por defecto). Oscuro: html[data-theme="dark"] */
+    html:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f3f5f9;
+      --surface: #ffffff;
+      --surface2: #eef1f6;
+      --border: #cfd6e3;
+      --accent: #b86e00;
+      --accent2: #d68a10;
+      --blue: #1d4ed8;
+      --green: #15803d;
+      --red: #b91c1c;
+      --orange: #c2410c;
+      --text: #1a2233;
+      --muted: #4f5b73;
+    }
+    html[data-theme="dark"] { color-scheme: dark; }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -198,7 +216,7 @@
     }
     .btn-primary {
       background: var(--accent);
-      color: #0a0d14;
+      color: var(--surface);
     }
     .btn-primary:hover { background: var(--accent2); }
     .btn-ghost {
@@ -460,6 +478,7 @@
       <span id="user-rol-badge" class="badge badge-blue" style="font-size:10px;"></span>
       <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="doLogout()">Salir</button>
     </div>
+    <button class="btn btn-ghost" id="btn-tema" style="padding:4px 10px;font-size:12px;" onclick="toggleTema()" title="Cambiar tema claro / oscuro"></button>
     <div id="status-dot"></div>
     <span id="status-label">Conectando…</span>
   </div>
@@ -1633,6 +1652,14 @@
 </div>
 
 <script>
+function pintarBtnTema(){ document.getElementById('btn-tema').textContent = document.documentElement.dataset.theme==='dark' ? '☀️ Claro' : '🌙 Oscuro'; }
+function toggleTema(){
+  const r=document.documentElement, osc=r.dataset.theme!=='dark';
+  if(osc) r.dataset.theme='dark'; else delete r.dataset.theme;
+  try{ localStorage.setItem('nt-tema', osc?'dark':'light'); }catch(e){}
+  pintarBtnTema();
+}
+document.addEventListener('DOMContentLoaded', pintarBtnTema);
 // ─── SUPABASE CONFIG ───────────────────────────────────────────
 const SUPABASE_URL = 'https://ahdcofcmxrfhqszevptp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_2PJl-a_zHgZsYL4or5W3NQ_PJ3UXGoo';

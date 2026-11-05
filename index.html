@@ -107,17 +107,20 @@
       padding: 12px 18px;
       border: none;
       background: none;
-      color: var(--muted);
+      color: var(--text);
       font-family: var(--font-body);
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
-      border-bottom: 2px solid transparent;
+      border-bottom: 3px solid transparent;
+      border-radius: 6px 6px 0 0;
       transition: all .2s;
     }
-    .nav-btn:hover { color: var(--text); }
+    .nav-btn:hover { background: var(--surface2); }
     .nav-btn.active {
       color: var(--accent);
+      font-weight: 700;
+      background: var(--surface2);
       border-bottom-color: var(--accent);
     }
 

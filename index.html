@@ -688,6 +688,7 @@
         <option value="__nr">Sin registrar</option>
       </select>
       <button class="btn btn-ghost" onclick="loadVehiculos().then(renderClima)">↺ Actualizar</button>
+      <button class="btn btn-ghost" onclick="exportarClimaExcel()">⬇ Excel</button>
     </div>
 
     <div class="table-wrap">
@@ -2331,15 +2332,45 @@ function renderClima() {
   renderClimaPatentes();
 }
 
-function renderClimaPatentes() {
+function climaFiltradas() {
   const q      = document.getElementById('clima-q').value.trim().toUpperCase();
   const ciudad = document.getElementById('clima-f-ciudad').value;
   const estado = document.getElementById('clima-f-estado').value;
-  const lista = climaVisibles().filter(v =>
+  return climaVisibles().filter(v =>
     (!q      || (v.patente || '').includes(q)) &&
     (!ciudad || v.ciudad === ciudad) &&
     (!estado || climaEstadoDe(v) === estado)
   );
+}
+
+async function exportarClimaExcel() {
+  try {
+    const lista = climaFiltradas();
+    if (!lista.length) { toast('No hay patentes con esos filtros', 'error'); return; }
+    if (typeof XLSX === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const rows = lista.map(v => {
+      const e = climaEstadoDe(v);
+      return {
+        'Patente': v.patente, 'Ciudad': v.ciudad || '',
+        'Equipo': v.clima_equipo || 'Sin registrar',
+        'Estado': e === 'Operativo' || e === 'Con falla' ? e : '',
+        'Temperatura °C': v.clima_temp ?? '',
+        'Temp. en rango (15–25 °C)': v.clima_temp != null ? (climaTempOk(v.clima_temp) ? 'Sí' : 'No') : '',
+        'Observación': v.clima_obs || '',
+        'Última actualización': v.clima_fecha ? fmtDateHora(v.clima_fecha) : '',
+        'Actualizó': v.clima_usuario || '' };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [10, 16, 14, 12, 14, 22, 50, 20, 28].map(wch => ({ wch }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Climatización');
+    const ciudad = document.getElementById('clima-f-ciudad').value;
+    XLSX.writeFile(wb, `NTFleet_Climatizacion${ciudad ? '_' + ciudad.replace(/\s/g, '') : ''}_${hoyISO()}.xlsx`);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderClimaPatentes() {
+  const lista = climaFiltradas();
   const badgeEstado = { 'Operativo':'badge-green', 'Con falla':'badge-red' };
   document.getElementById('tbody-clima-patentes').innerHTML = lista.length ? lista.map(v => {
     const e = climaEstadoDe(v);

@@ -1920,6 +1920,7 @@ async function loadVehiculos() {
     renderVehiculos(allVehiculos);
     updateStats();
     populateCiudadSelect();
+    if (allMantencion.length) filterMantencion(); // el estado del vehículo cambió: refresca Mantención
     // populateVehSelect — patente libre
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">Error: ${e.message}</td></tr>`;
@@ -2063,8 +2064,15 @@ async function loadMantencion() {
   }
 }
 
+// Pestaña Mantención: solo vehículos Operativos (excluye En mantención, Bloqueado e Inactivo)
+function soloOperativos(list) {
+  const op = new Set(allVehiculos.filter(v => v.estado === 'Operativo').map(v => v.patente));
+  return list.filter(m => op.has(m.vehiculo_patente));
+}
+
 function renderMantencion(list) {
   const tbody = document.getElementById('tbody-mantencion');
+  list = soloOperativos(list);
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin registros de mantención</td></tr>';
     return;
@@ -4119,7 +4127,7 @@ async function exportarMantExcel() {
   const patCiudad = {};
   allVehiculos.forEach(v => { patCiudad[v.patente] = v; });
 
-  const list = allMantencion.filter(m => {
+  const list = soloOperativos(allMantencion).filter(m => {
     const veh = patCiudad[m.vehiculo_patente] || {};
     return (!q      || [m.vehiculo_patente, m.tipo].join(' ').toLowerCase().includes(q)) &&
            (!tipo   || m.tipo === tipo) &&

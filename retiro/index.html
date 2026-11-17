@@ -170,7 +170,45 @@ tr:last-child td{border-bottom:none;}
 #toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; transition:all .18s ease; background:var(--ink); color:var(--paper); padding:9px 16px; border-radius:8px; font-size:12.5px; font-weight:600; z-index:100; pointer-events:none; box-shadow:var(--shadow); max-width:80vw; text-align:center;}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
-@media (max-width: 640px){ main{padding:14px;} .topbar{padding:10px 14px;} .grid-kpi{grid-template-columns:repeat(2,1fr);} }
+.t-short{display:none;}
+@media (min-width: 641px) and (max-width: 1400px){ .main-tabs{order:3; flex:1 1 100%; flex-wrap:nowrap;} }
+@media (max-width: 640px){
+  .grid-kpi{grid-template-columns:repeat(2,1fr);}
+  main{padding:12px 12px 88px;}
+  /* cabecera compacta: título + usuario en 2 filas finas */
+  .topbar{padding:8px 12px; gap:4px 10px;}
+  .brand{font-size:14px;} .brand .mark{width:24px;height:24px;font-size:12px;}
+  .top-meta{flex:1; min-width:0; justify-content:flex-end; gap:8px;}
+  .top-meta .clock, #liveLabel{display:none;}
+  .user-chip{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--ink-soft); min-width:0; max-width:62vw;} .user-chip .uname{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;} .user-chip button{flex:none; padding:6px 4px;}
+  /* menú inferior con 5 botones grandes */
+  .main-tabs{position:fixed; left:0; right:0; bottom:0; z-index:45; min-width:0; flex:none; flex-wrap:nowrap; gap:2px; background:var(--paper-raised); border-top:1px solid var(--line); padding:6px 6px calc(6px + env(safe-area-inset-bottom));}
+  .main-tabs button{flex:1; min-width:0; padding:11px 2px; font-size:12px; text-align:center; border-radius:10px;}
+  .t-full{display:none;} .t-short{display:inline;}
+  #toast{bottom:88px;}
+  /* menos texto, más contenido útil arriba */
+  .page-head{margin-bottom:10px;} .page-head h1{font-size:19px; margin:0 0 6px;}
+  .page-head p{display:none;}
+  .summary-bar{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px;}
+  .summary-chip{flex-direction:column; align-items:flex-start; gap:2px; padding:8px 9px; min-width:0;}
+  .summary-chip .n{font-size:17px;} .summary-chip .l{font-size:10px; line-height:1.2;}
+  .toolbar{gap:8px;} .toolbar .search{flex:1 1 100%;} .toolbar .search input{width:100%; height:42px;}
+  .toolbar .chipset{flex-wrap:nowrap; overflow-x:auto; max-width:100%; padding-bottom:2px;}
+  .toolbar .chipset button{flex:none; padding:9px 13px; font-size:12.5px;}
+  .stepper button{width:44px; height:44px; font-size:18px;} .stepper .val{width:52px; font-size:16px;}
+  .btn.small{padding:10px 16px;}
+  /* Flota: tabla -> tarjetas */
+  .flota-table{border:none; background:transparent; overflow:visible;}
+  .flota-table table{min-width:0; display:block;} .flota-table thead{display:none;}
+  .flota-table tbody{display:block;}
+  .flota-table tr{display:grid; grid-template-columns:auto auto 1fr; gap:6px 12px; align-items:center; padding:12px; margin-bottom:10px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper-raised);}
+  .flota-table td{display:block; padding:0; border:none; font-size:12.5px; color:var(--ink-soft);}
+  .flota-table td:nth-child(1){grid-column:1/3; grid-row:1; font-size:15px; font-weight:700; color:var(--ink);}
+  .flota-table td:nth-child(7){grid-column:3; grid-row:1; justify-self:end;}
+  .flota-table td:nth-child(2){grid-column:1; grid-row:2;} .flota-table td:nth-child(3){grid-column:2; grid-row:2;} .flota-table td:nth-child(4){grid-column:3; grid-row:2;}
+  .flota-table td:nth-child(5){grid-column:1/4; grid-row:3;} .flota-table td:nth-child(6){grid-column:1/4; grid-row:4;}
+  .flota-table select, .flota-table input{width:100% !important; height:44px; font-size:14px;}
+}
 </style>
 
 <div id="authScreen" hidden>
@@ -259,7 +297,7 @@ function showApp(){
   document.getElementById('authScreen').hidden = true;
   document.getElementById('app').hidden = false;
   const chip = document.getElementById('userChip');
-  chip.innerHTML = `${escapeHtml(miPerfil.nombre || miPerfil.email)} · ${miPerfil.rol} <button id="btnLogout">Salir</button>`;
+  chip.innerHTML = `<span class="uname">${escapeHtml(miPerfil.nombre || miPerfil.email)} · ${miPerfil.rol}</span> <button id="btnLogout">Salir</button>`;
   document.getElementById('btnLogout').addEventListener('click', ()=>sb.auth.signOut());
   const allowed = ROLE_TABS[miPerfil.rol] || [];
   if(!allowed.includes(currentSection)) currentSection = allowed[0];
@@ -471,11 +509,11 @@ async function reiniciarDia(){
 
 /* ============================= APP SHELL ============================= */
 const SECTIONS = [
-  {id:'resumen', label:'Resumen'},
-  {id:'carga', label:'Carga de Pallets'},
-  {id:'flota', label:'Disponibilidad de Flota'},
-  {id:'viajes', label:'Camiones y Viajes'},
-  {id:'consulta', label:'Consulta'},
+  {id:'resumen', label:'Resumen', short:'Resumen'},
+  {id:'carga', label:'Carga de Pallets', short:'Carga'},
+  {id:'flota', label:'Disponibilidad de Flota', short:'Flota'},
+  {id:'viajes', label:'Camiones y Viajes', short:'Viajes'},
+  {id:'consulta', label:'Consulta', short:'Consulta'},
 ];
 let currentSection = 'resumen';
 let cargaActor = localStorage.getItem('retiro-carga-actor') || 'SAC';
@@ -486,7 +524,7 @@ let clientesTurnoFiltroViajes = 'todos';
 function renderTopTabs(){
   const nav = document.getElementById('mainTabs');
   const allowed = ROLE_TABS[miPerfil.rol] || [];
-  nav.innerHTML = SECTIONS.filter(s=>allowed.includes(s.id)).map(s=>`<button data-sec="${s.id}" class="${s.id===currentSection?'active':''}">${s.label}</button>`).join('');
+  nav.innerHTML = SECTIONS.filter(s=>allowed.includes(s.id)).map(s=>`<button data-sec="${s.id}" class="${s.id===currentSection?'active':''}"><span class="t-full">${s.label}</span><span class="t-short">${s.short}</span></button>`).join('');
   nav.querySelectorAll('button').forEach(b=>{
     b.addEventListener('click', ()=>{ currentSection = b.dataset.sec; render(); });
   });
@@ -652,7 +690,7 @@ function cargaCard(c, ind){
   const row = palletsRow(c.id);
   const val = row ? row.cantidad : 0;
   return `<div class="card ccard" data-carga-card="${c.id}">
-    <div class="ccard-top"><div><div class="ccard-name">${escapeHtml(c.nombre)}</div><div class="ccard-meta">${c.turno} · ref. ruta ${escapeHtml(c.ruta_ref||'—')}</div></div>${ind1BadgeHtml(ind)}</div>
+    <div class="ccard-top"><div><div class="ccard-name">${escapeHtml(c.nombre)}</div><div class="ccard-meta">${c.turno} · ${escapeHtml(c.ruta_ref||'ref. ruta —')}</div></div>${ind1BadgeHtml(ind)}</div>
     <div class="ccard-row">
       <div class="ccard-time">${escapeHtml(horarioTextoHoy(c)||'—')}</div>
       <div class="stepper">
@@ -697,7 +735,7 @@ function viewFlota(){
       <p>Chequeo de disponibilidad MACRO del día (mantención, falla, viaje a otra operación) — hoy la determina Operaciones; las unidades en taller o inactivas en NTFleet se bloquean automáticamente y no se pueden editar aquí. Distinto del estado dinámico "en viaje" de la pestaña Camiones y Viajes.</p>
     </div>
     <div class="section-note"><b>${state.vehiculos.length} unidades</b> — ${state.vehiculos.filter(v=>v.categoria==='Camion').length} Camiones + ${state.vehiculos.filter(v=>v.categoria==='Rampla').length} Ramplas. El chequeo debe hacerse el mismo día, antes de asignar viajes.</div>
-    <div class="table-wrap">
+    <div class="table-wrap flota-table">
       <table><thead><tr><th>Patente</th><th>Categoría</th><th>Capacidad</th><th>Viajes hoy</th><th>Estado del día</th><th>Motivo</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table>
     </div>

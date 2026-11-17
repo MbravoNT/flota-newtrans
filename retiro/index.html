@@ -683,11 +683,11 @@ function viewFlota(){
       <td class="mono">${v.capacidad_pallets} plt</td>
       <td class="mono">${nViajes} hoy</td>
       <td>
-        <select data-patente="${v.patente}" class="estado-select" ${v.bloqueado_por_taller?'disabled title="Bloqueado por Taller (NTFleet)"':''}>
+        <select data-patente="${v.patente}" class="estado-select" ${v.bloqueado_por_taller?'disabled title="Bloqueado por Taller (NTFleet)"':(!puedeAsignarFlota()?'disabled title="Solo lectura"':'')}>
           ${v.bloqueado_por_taller?`<option selected>${ESTADO_VEHICULO_LABEL[v.estado_disponibilidad]}</option>`:ESTADOS_VEHICULO.map(e=>`<option value="${e}" ${v.estado_disponibilidad===e?'selected':''}>${ESTADO_VEHICULO_LABEL[e]}</option>`).join('')}
         </select>
       </td>
-      <td><input type="text" data-patente="${v.patente}" class="motivo-input" placeholder="Motivo (opcional)" ${v.bloqueado_por_taller?'disabled':''} value="${escapeHtml(v.motivo||'')}" style="width:170px;"></td>
+      <td><input type="text" data-patente="${v.patente}" class="motivo-input" placeholder="Motivo (opcional)" ${(v.bloqueado_por_taller||!puedeAsignarFlota())?'disabled':''} value="${escapeHtml(v.motivo||'')}" style="width:170px;"></td>
       <td>${estadoBadge}</td>
     </tr>`;
   }).join('');

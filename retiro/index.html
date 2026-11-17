@@ -346,6 +346,7 @@ function logEvento(msg){
 }
 
 /* ============================= DATA LOAD ============================= */
+let lastSig='';
 async function cargarTodo(){
   try{
     const fecha = hoyISO();
@@ -369,7 +370,8 @@ async function cargarTodo(){
       state.paradas = [];
     }
     setLive(true);
-    render();
+    const sig = JSON.stringify([state.clientes,state.vehiculos,state.pallets,state.viajes,state.paradas,Math.floor(Date.now()/60000)]);
+    if(sig!==lastSig){ lastSig=sig; render(); } // solo redibuja si cambiaron los datos (evita parpadeo y perder lo abierto/escrito)
   }catch(e){
     console.error(e);
     setLive(false);

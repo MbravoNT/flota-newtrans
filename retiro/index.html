@@ -1,0 +1,937 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Torre de Control de Retiros</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --paper:#FBF7F0; --paper-raised:#FFFFFF; --ink:#182420; --ink-soft:#54604F; --ink-faint:#8B9187;
+  --line:#E3DCC9; --line-soft:#EEE9DB;
+  --accent:#0E6E63; --accent-ink:#FFFFFF; --accent-soft:#E1EEE9; --accent-soft-line:#C7DFD7;
+  --green:#2E7D4F; --green-soft:#E3F1E7; --green-line:#BFDFC9;
+  --amber:#A6641E; --amber-soft:#F7ECD9; --amber-line:#E7CE9C;
+  --red:#B5402C; --red-soft:#F8E4DE; --red-line:#EEBBAB;
+  --neutral:#6B6357; --neutral-soft:#EFEAE0; --neutral-line:#DCD4C2;
+  --shadow: 0 1px 2px rgba(20,30,25,.06), 0 6px 16px rgba(20,30,25,.06);
+  --radius: 10px; color-scheme: light; font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10130F; --paper-raised:#191D17; --ink:#EBE7D8; --ink-soft:#AEB4A4; --ink-faint:#767C6F;
+    --line:#2B2F27; --line-soft:#20241E;
+    --accent:#5FC7B4; --accent-ink:#0A1512; --accent-soft:#1B2B26; --accent-soft-line:#2A4941;
+    --green:#7FCB94; --green-soft:#1B2A1E; --green-line:#2F4A34;
+    --amber:#E0A857; --amber-soft:#2F2718; --amber-line:#4A3C22;
+    --red:#E58771; --red-soft:#331D18; --red-line:#4E2C24;
+    --neutral:#9DA396; --neutral-soft:#1E2119; --neutral-line:#33372C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10130F; --paper-raised:#191D17; --ink:#EBE7D8; --ink-soft:#AEB4A4; --ink-faint:#767C6F;
+  --line:#2B2F27; --line-soft:#20241E;
+  --accent:#5FC7B4; --accent-ink:#0A1512; --accent-soft:#1B2B26; --accent-soft-line:#2A4941;
+  --green:#7FCB94; --green-soft:#1B2A1E; --green-line:#2F4A34;
+  --amber:#E0A857; --amber-soft:#2F2718; --amber-line:#4A3C22;
+  --red:#E58771; --red-soft:#331D18; --red-line:#4E2C24;
+  --neutral:#9DA396; --neutral-soft:#1E2119; --neutral-line:#33372C;
+  color-scheme: dark;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--paper); color:var(--ink); font-family:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; font-size:14px; line-height:1.45;}
+.mono{font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;}
+button, select, input{font-family:inherit; font-size:inherit; color:inherit;}
+::-webkit-scrollbar{height:9px;width:9px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;}
+
+#app{display:flex; flex-direction:column; min-height:100vh;}
+.topbar{display:flex; align-items:center; gap:20px; padding:12px 20px; border-bottom:1px solid var(--line); background:var(--paper-raised); position:sticky; top:0; z-index:40; flex-wrap:wrap;}
+.brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; white-space:nowrap;}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--accent-ink); display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;}
+.main-tabs{display:flex; gap:4px; flex:1; min-width:260px; flex-wrap:wrap;}
+.main-tabs button{border:1px solid transparent; background:transparent; color:var(--ink-soft); padding:8px 14px; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;}
+.main-tabs button:hover{background:var(--line-soft); color:var(--ink);}
+.main-tabs button.active{background:var(--accent-soft); color:var(--accent); border-color:var(--accent-soft-line);}
+.top-meta{display:flex; align-items:center; gap:10px; margin-left:auto;}
+.clock{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint);}
+.badge-live{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-soft);}
+.livedot{width:7px;height:7px;border-radius:50%; background:var(--green); box-shadow:0 0 0 3px var(--green-soft);}
+.livedot.off{background:var(--red); box-shadow:0 0 0 3px var(--red-soft);}
+.theme-toggle{border:1px solid var(--line); background:var(--paper-raised); color:var(--ink-soft); width:30px; height:30px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+.theme-toggle:hover{color:var(--ink); border-color:var(--ink-faint);}
+
+main{flex:1; padding:20px; max-width:1320px; width:100%; margin:0 auto;}
+
+h1{font-size:20px; margin:0 0 4px; letter-spacing:-.01em;}
+h2{font-size:15px; margin:0 0 10px;}
+.page-head{margin-bottom:18px;}
+.page-head p{margin:0; color:var(--ink-soft); font-size:13px; max-width:66ch;}
+.role-line{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; border:1px solid var(--neutral-line); background:var(--neutral-soft); color:var(--neutral);}
+.pill.readonly{background:var(--accent-soft); color:var(--accent); border-color:var(--accent-soft-line);}
+
+.card{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);}
+.grid-kpi{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:18px;}
+.kpi{padding:14px 16px;}
+.kpi .num{font-family:"IBM Plex Mono",monospace; font-size:26px; font-weight:600; line-height:1;}
+.kpi .lbl{color:var(--ink-soft); font-size:12px; margin-top:6px;}
+.kpi.warn .num{color:var(--amber);} .kpi.crit .num{color:var(--red);} .kpi.ok .num{color:var(--green);}
+
+.section-title{display:flex; align-items:center; justify-content:space-between; margin:26px 0 10px;}
+.section-title h2{margin:0;}
+
+table{width:100%; border-collapse:collapse; font-size:13px;}
+th{text-align:left; color:var(--ink-faint); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:8px 10px; border-bottom:1px solid var(--line);}
+td{padding:9px 10px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper-raised);}
+.table-wrap table{min-width:640px;}
+
+.badge{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; border:1px solid transparent;}
+.badge.green{background:var(--green-soft); color:var(--green); border-color:var(--green-line);}
+.badge.amber{background:var(--amber-soft); color:var(--amber); border-color:var(--amber-line);}
+.badge.red{background:var(--red-soft); color:var(--red); border-color:var(--red-line);}
+.badge.neutral{background:var(--neutral-soft); color:var(--neutral); border-color:var(--neutral-line);}
+.dot{width:7px;height:7px;border-radius:50%; background:currentColor; flex:none;}
+
+.toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+.search{flex:1; min-width:190px; display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--paper-raised); border-radius:8px; padding:8px 12px;}
+.search input{border:none; outline:none; background:transparent; width:100%; color:var(--ink); font-size:13px;}
+.chipset{display:flex; gap:6px; flex-wrap:wrap;}
+.chipset button{border:1px solid var(--line); background:var(--paper-raised); color:var(--ink-soft); padding:6px 11px; border-radius:999px; font-size:12px; font-weight:600; cursor:pointer;}
+.chipset button.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+
+.btn{border:1px solid var(--line); background:var(--paper-raised); color:var(--ink); padding:8px 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;}
+.btn:hover{border-color:var(--ink-faint);}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(1.05);}
+.btn.ghost{background:transparent; border-color:transparent; color:var(--ink-soft); padding:6px 8px;}
+.btn.small{padding:5px 10px; font-size:12px;}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+
+.empty{padding:36px 20px; text-align:center; color:var(--ink-faint); font-size:13px;}
+
+.client-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px;}
+.ccard{padding:14px; display:flex; flex-direction:column; gap:10px;}
+.ccard-top{display:flex; justify-content:space-between; gap:8px; align-items:flex-start;}
+.ccard-name{font-weight:700; font-size:14.5px;}
+.ccard-meta{color:var(--ink-faint); font-size:11.5px; margin-top:2px;}
+.ccard-time{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-soft); display:flex; align-items:center; gap:5px;}
+.stepper{display:flex; align-items:center; gap:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; width:fit-content;}
+.stepper button{width:30px; height:30px; border:none; background:var(--paper-raised); color:var(--ink); cursor:pointer; font-size:15px;}
+.stepper button:hover{background:var(--line-soft);}
+.stepper .val{width:42px; text-align:center; font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:14px;}
+.ccard-row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+
+.section-note{border:1px dashed var(--line); border-radius:8px; padding:10px 12px; color:var(--ink-soft); font-size:12px; margin-bottom:16px; background:var(--paper-raised);}
+.section-note b{color:var(--ink);}
+
+.summary-bar{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+.summary-chip{display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:9px; border:1px solid var(--line); background:var(--paper-raised); min-width:120px;}
+.summary-chip .n{font-family:"IBM Plex Mono",monospace; font-size:18px; font-weight:700;}
+.summary-chip .l{font-size:11px; color:var(--ink-faint);}
+
+.truck-card{border:1px solid var(--line); border-radius:9px; padding:10px 12px; margin-bottom:10px; background:var(--paper-raised);}
+.truck-card.enviaje{border-left:3px solid var(--accent);}
+.truck-card.disponible{border-left:3px solid var(--green);}
+.truck-card.nodisp{border-left:3px solid var(--neutral); opacity:.75;}
+.truck-head{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.truck-head .patente{font-weight:700; font-size:13.5px;}
+.truck-cap{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+.capbar{height:5px; border-radius:99px; background:var(--line-soft); overflow:hidden; margin-top:6px;}
+.capbar > div{height:100%; background:var(--accent);}
+.capbar.over > div{background:var(--red);}
+.stop-list{margin-top:8px; display:flex; flex-direction:column; gap:5px;}
+.stop{display:flex; align-items:center; gap:6px; font-size:12px;}
+.stop .stop-state{width:7px; height:7px; border-radius:50%; flex:none;}
+.stop-state.pendiente{background:var(--ink-faint);}
+.stop-state.entregado{background:var(--green);}
+.truck-actions{display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center;}
+.truck-actions select, .truck-actions input{border:1px solid var(--line); border-radius:7px; padding:5px 7px; background:var(--paper-raised); font-size:12px;}
+
+.timeline{display:flex; flex-direction:column; gap:0;}
+.tl-item{display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:12px;}
+.tl-item:last-child{border-bottom:none;}
+.tl-item .ts{color:var(--ink-faint); flex:none; width:48px;}
+
+.footnote{margin-top:26px; padding-top:14px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:11.5px; line-height:1.6;}
+
+#authScreen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
+#authScreen .box{width:100%; max-width:340px; padding:26px 24px;}
+#authScreen h1{font-size:17px; margin-bottom:4px;}
+#authScreen p{color:var(--ink-soft); font-size:12.5px; margin:0 0 18px;}
+#authScreen label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin:12px 0 4px;}
+#authScreen input{width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; background:var(--paper-raised);}
+#authScreen .btn{width:100%; margin-top:18px;}
+#authScreen .err{color:var(--red); font-size:12px; margin-top:10px; display:none;}
+.user-chip{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft);}
+.user-chip button{border:none; background:transparent; color:var(--ink-faint); cursor:pointer; font-size:11.5px; text-decoration:underline; padding:0;}
+
+#toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; transition:all .18s ease; background:var(--ink); color:var(--paper); padding:9px 16px; border-radius:8px; font-size:12.5px; font-weight:600; z-index:100; pointer-events:none; box-shadow:var(--shadow); max-width:80vw; text-align:center;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+@media (max-width: 640px){ main{padding:14px;} .topbar{padding:10px 14px;} .grid-kpi{grid-template-columns:repeat(2,1fr);} }
+</style>
+
+<div id="authScreen" hidden>
+  <div class="card box">
+    <h1>Torre de Control · Retiros</h1>
+    <p>Ingresa con tu cuenta de Newtrans para continuar.</p>
+    <form id="loginForm">
+      <label for="loginEmail">Correo</label>
+      <input id="loginEmail" type="email" required autocomplete="username">
+      <label for="loginPass">Contraseña</label>
+      <input id="loginPass" type="password" required autocomplete="current-password">
+      <button class="btn primary" type="submit">Ingresar</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="brand"><span class="mark">TR</span> Torre de Control · Retiros</div>
+    <nav class="main-tabs" id="mainTabs"></nav>
+    <div class="top-meta">
+      <span class="user-chip" id="userChip"></span>
+      <span class="badge-live"><span class="livedot" id="liveDot"></span><span id="liveLabel">conectando…</span></span>
+      <span class="clock" id="clock"></span>
+      <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+  <main id="mainArea"></main>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================= SUPABASE ============================= */
+const SUPABASE_URL = "https://ahdcofcmxrfhqszevptp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZGNvZmNteHJmaHFzemV2cHRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NjY5ODcsImV4cCI6MjA5NjI0Mjk4N30.YNLB_lQzIrH0I4KNykb3VPplFmVT_s_mtzwYCVGxhYc";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const ESTADOS_VEHICULO = ['Disponible','Mantencion','Falla','Viaje_otra_operacion','Inactivo'];
+const ESTADO_VEHICULO_LABEL = {Disponible:'Disponible', Mantencion:'Mantención', Falla:'Falla', Viaje_otra_operacion:'Viaje a otra operación', Inactivo:'Inactivo'};
+
+/* ============================= STATE ============================= */
+let state = { clientes:[], vehiculos:[], pallets:[], viajes:[], paradas:[] };
+let liveEventLog = [];
+let liveOk = false;
+let miPerfil = null; // {id, email, nombre, rol}
+let pollHandle = null;
+
+/* ============================= AUTH / ROLES ============================= */
+const ROLE_TABS = {
+  Administrador: ['resumen','carga','flota','viajes','consulta'],
+  Operaciones:   ['resumen','carga','flota','viajes','consulta'],
+  Carga:         ['carga','consulta'],
+};
+function puedeAdministrar(){ return miPerfil && miPerfil.rol === 'Administrador'; }
+function puedeAsignarFlota(){ return miPerfil && (miPerfil.rol === 'Administrador' || miPerfil.rol === 'Operaciones'); }
+
+async function initAuth(){
+  sb.auth.onAuthStateChange((_event, session)=>{ handleSession(session); });
+  const {data:{session}} = await sb.auth.getSession();
+  handleSession(session);
+}
+async function handleSession(session){
+  if(!session){ miPerfil = null; showLogin(); return; }
+  const {data, error} = await sb.from('retiro_perfiles').select('*').eq('id', session.user.id).maybeSingle();
+  if(error || !data){
+    showLogin(`Tu cuenta (${session.user.email}) no tiene acceso a Retiro. Pide a un Administrador que te agregue.`);
+    await sb.auth.signOut();
+    return;
+  }
+  miPerfil = data;
+  showApp();
+}
+function showLogin(msg){
+  document.getElementById('authScreen').hidden = false;
+  document.getElementById('app').hidden = true;
+  if(pollHandle){ clearInterval(pollHandle); pollHandle = null; }
+  const err = document.getElementById('loginErr');
+  if(msg){ err.textContent = msg; err.style.display = 'block'; }
+}
+function showApp(){
+  document.getElementById('authScreen').hidden = true;
+  document.getElementById('app').hidden = false;
+  const chip = document.getElementById('userChip');
+  chip.innerHTML = `${escapeHtml(miPerfil.nombre || miPerfil.email)} · ${miPerfil.rol} <button id="btnLogout">Salir</button>`;
+  document.getElementById('btnLogout').addEventListener('click', ()=>sb.auth.signOut());
+  const allowed = ROLE_TABS[miPerfil.rol] || [];
+  if(!allowed.includes(currentSection)) currentSection = allowed[0];
+  cargarTodo();
+  if(pollHandle) clearInterval(pollHandle);
+  pollHandle = setInterval(cargarTodo, 4000);
+}
+function wireLogin(){
+  document.getElementById('loginForm').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPass').value;
+    const err = document.getElementById('loginErr');
+    err.style.display = 'none';
+    const {error} = await sb.auth.signInWithPassword({email, password});
+    if(error){ console.error(error); err.textContent = (error.code==='invalid_credentials' || /invalid login/i.test(error.message||'')) ? 'Correo o contraseña incorrectos.' : 'No se pudo ingresar: ' + (error.message || error.code || 'error desconocido'); err.style.display = 'block'; }
+  });
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+const hoyISO = () => new Date().toISOString().slice(0,10);
+function nowMinutes(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+function isFridayToday(){ return new Date().getDay()===5; }
+function fmtTime(ts){ if(!ts) return '—'; const d=new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function logEvento(msg){
+  liveEventLog.unshift({ts:new Date(), msg});
+  liveEventLog = liveEventLog.slice(0,60);
+}
+
+/* ============================= DATA LOAD ============================= */
+async function cargarTodo(){
+  try{
+    const fecha = hoyISO();
+    const [clientesR, vehiculosR, palletsR, viajesR] = await Promise.all([
+      sb.from('retiro_clientes').select('*'),
+      sb.from('retiro_vehiculos_efectivo').select('*'),
+      sb.from('retiro_pallets_dia').select('*').eq('fecha', fecha),
+      sb.from('retiro_viajes').select('*').eq('fecha', fecha).order('hora_inicio',{ascending:true}),
+    ]);
+    for(const r of [clientesR, vehiculosR, palletsR, viajesR]) if(r.error) throw r.error;
+    state.clientes = clientesR.data;
+    state.vehiculos = vehiculosR.data.map(v=>({...v, estado_disponibilidad:v.estado_efectivo, motivo:v.motivo_efectivo}));
+    state.pallets = palletsR.data;
+    state.viajes = viajesR.data;
+    const viajeIds = state.viajes.map(v=>v.id);
+    if(viajeIds.length){
+      const paradasR = await sb.from('retiro_viaje_paradas').select('*').in('viaje_id', viajeIds);
+      if(paradasR.error) throw paradasR.error;
+      state.paradas = paradasR.data;
+    } else {
+      state.paradas = [];
+    }
+    setLive(true);
+    render();
+  }catch(e){
+    console.error(e);
+    setLive(false);
+  }
+}
+function setLive(ok){
+  liveOk = ok;
+  const dot = document.getElementById('liveDot'); const lbl = document.getElementById('liveLabel');
+  if(!dot) return;
+  dot.classList.toggle('off', !ok);
+  lbl.textContent = ok ? 'en vivo — datos compartidos con el equipo' : 'sin conexión — reintentando…';
+}
+
+/* ============================= DOMAIN HELPERS ============================= */
+function clienteMap(){ const m={}; state.clientes.forEach(c=>m[c.id]=c); return m; }
+function vehiculoMap(){ const m={}; state.vehiculos.forEach(v=>m[v.patente]=v); return m; }
+function palletsRow(clienteId){ return state.pallets.find(p=>p.cliente_id===clienteId); }
+function pallets(clienteId){ const r=palletsRow(clienteId); return r?r.cantidad:0; }
+function coberturaCliente(clienteId){ return state.paradas.filter(p=>p.cliente_id===clienteId).reduce((s,p)=>s+p.cantidad_pallets,0); }
+function paradasDeCliente(clienteId){ return state.paradas.filter(p=>p.cliente_id===clienteId); }
+function viajesDePatente(patente){ return state.viajes.filter(v=>v.patente===patente); }
+function viajeActivoDe(patente){ return state.viajes.find(v=>v.patente===patente && v.estado==='en_curso'); }
+function paradasDe(viajeId){ return state.paradas.filter(p=>p.viaje_id===viajeId).sort((a,b)=>a.orden-b.orden); }
+function capacidadUsada(viaje){ return paradasDe(viaje.id).reduce((s,p)=>s+p.cantidad_pallets,0); }
+
+function horarioTextoHoy(cliente){ return isFridayToday() ? cliente.horario_v : cliente.horario_lj; }
+function parseLastTimeToMinutes(text){
+  if(!text) return null;
+  const t = String(text).trim();
+  if(t==='' || t==='—' || t.toLowerCase()==='sin horario') return null;
+  const matches = [...t.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(?:hrs?\.?|horas)?/g)];
+  if(!matches.length) return null;
+  const last = matches[matches.length-1];
+  let h = parseInt(last[1],10); let m = last[2]?parseInt(last[2],10):0;
+  if(isNaN(h)||h>23||m>59) return null;
+  return h*60+m;
+}
+function getIndicator1(cliente){
+  const deadlineMin = parseLastTimeToMinutes(horarioTextoHoy(cliente));
+  if(deadlineMin===null) return {status:'neutral', label:'Sin horario definido'};
+  const windowStart = deadlineMin-120;
+  const now = nowMinutes();
+  const row = palletsRow(cliente.id);
+  if(row && row.updated_at){
+    const upd = new Date(row.updated_at);
+    const updMin = upd.getHours()*60+upd.getMinutes();
+    if(updMin<=windowStart) return {status:'verde', label:'A tiempo (≥2h antes)'};
+    if(updMin<deadlineMin) return {status:'amarillo', label:'Cargado con riesgo (<2h antes)'};
+    return {status:'rojo', label:'Cargado tarde (en la hora o después)'};
+  }
+  if(now<windowStart) return {status:'pendiente', label:`A tiempo · carga hasta ${pad2(Math.floor(windowStart/60))}:${pad2(windowStart%60)}`};
+  if(now<deadlineMin) return {status:'amarillo', label:'Urgente · sin cargar'};
+  return {status:'rojo', label:'Plazo vencido · sin cargar'};
+}
+function ind1BadgeHtml(ind){
+  const map = {verde:'green', amarillo:'amber', rojo:'red', neutral:'neutral', pendiente:'neutral'};
+  return `<span class="badge ${map[ind.status]}" title="${escapeHtml(ind.label)}"><span class="dot"></span>${escapeHtml(ind.label)}</span>`;
+}
+function getEstadoCliente(cliente){
+  const solicitado = pallets(cliente.id);
+  if(solicitado===0) return {code:'sin_pallets', label:'Sin pallets solicitados', tone:'neutral'};
+  const cobertura = coberturaCliente(cliente.id);
+  const ps = paradasDeCliente(cliente.id);
+  if(cobertura < solicitado) return {code:'pendiente', label:'Pendiente de asignar', tone:'red'};
+  const todasEntregadas = ps.length>0 && ps.every(p=>p.estado_parada==='entregado');
+  if(todasEntregadas) return {code:'entregado', label:'Retirado', tone:'green'};
+  return {code:'en_curso', label:'Camión en camino', tone:'amber'};
+}
+function statusBadgeHtml(st){ return `<span class="badge ${st.tone}"><span class="dot"></span>${escapeHtml(st.label)}</span>`; }
+
+/* ============================= WRITE OPS ============================= */
+async function setPallets(clienteId, cantidad, actor){
+  cantidad = Math.max(0, cantidad);
+  const {error} = await sb.from('retiro_pallets_dia').upsert({
+    cliente_id: clienteId, fecha: hoyISO(), cantidad, updated_by_area: actor, updated_at: new Date().toISOString()
+  });
+  if(error){ showToast('No se pudo guardar: '+error.message); return; }
+  const c = clienteMap()[clienteId];
+  logEvento(`<b>${actor}</b> actualizó pallets de <b>${escapeHtml(c?c.nombre:clienteId)}</b> a ${cantidad}`);
+  await cargarTodo();
+}
+async function setVehiculoEstado(patente, estado, motivo){
+  const {error} = await sb.from('retiro_vehiculos').update({estado_disponibilidad:estado, motivo: motivo||null, updated_at:new Date().toISOString()}).eq('patente', patente);
+  if(error){ showToast(error.message); return; }
+  logEvento(`Flota: <b>${patente}</b> → ${ESTADO_VEHICULO_LABEL[estado]||estado}`);
+  await cargarTodo();
+}
+async function iniciarViaje(patente, clienteId){
+  const vehiculo = vehiculoMap()[patente];
+  const solicitado = pallets(clienteId);
+  const cobertura = coberturaCliente(clienteId);
+  const pendiente = Math.max(0, solicitado - cobertura);
+  if(pendiente<=0){ showToast('Este cliente ya está cubierto'); return; }
+  const cantidad = Math.min(pendiente, vehiculo.capacidad_pallets);
+  const numeroViaje = viajesDePatente(patente).length + 1;
+  const {data:viaje, error} = await sb.from('retiro_viajes').insert({patente, fecha:hoyISO(), numero_viaje:numeroViaje, origen:'manual'}).select().single();
+  if(error){ showToast('Error al crear viaje: '+error.message); return; }
+  const {error:e2} = await sb.from('retiro_viaje_paradas').insert({viaje_id:viaje.id, cliente_id:clienteId, cantidad_pallets:cantidad, orden:1});
+  if(e2){ showToast('Error al asignar cliente: '+e2.message); return; }
+  const c = clienteMap()[clienteId];
+  logEvento(`Operaciones asignó <b>${patente}</b> a <b>${escapeHtml(c?c.nombre:clienteId)}</b> (viaje #${numeroViaje}, ${cantidad} plt)`);
+  await cargarTodo();
+}
+async function agregarParadaAlViaje(viajeId, clienteId, cantidad){
+  const viaje = state.viajes.find(v=>v.id===viajeId);
+  const vehiculo = vehiculoMap()[viaje.patente];
+  const usada = capacidadUsada(viaje);
+  if(usada + cantidad > vehiculo.capacidad_pallets){ showToast(`Excede capacidad del viaje: ${usada+cantidad}/${vehiculo.capacidad_pallets} plt`); return; }
+  if(cantidad<=0){ showToast('Cantidad inválida'); return; }
+  const orden = paradasDe(viajeId).length + 1;
+  const {error} = await sb.from('retiro_viaje_paradas').insert({viaje_id:viajeId, cliente_id:clienteId, cantidad_pallets:cantidad, orden});
+  if(error){ showToast(error.message); return; }
+  const c = clienteMap()[clienteId];
+  logEvento(`Se sumó <b>${escapeHtml(c?c.nombre:clienteId)}</b> al viaje en curso de <b>${viaje.patente}</b>`);
+  await cargarTodo();
+}
+async function simularLlegada(paradaId){
+  const {error} = await sb.from('retiro_viaje_paradas').update({estado_parada:'entregado', hora_llegada:new Date().toISOString()}).eq('id', paradaId);
+  if(error){ showToast(error.message); return; }
+  const parada = state.paradas.find(p=>p.id===paradaId);
+  const c = clienteMap()[parada.cliente_id];
+  logEvento(`GPS simulado: llegada a <b>${escapeHtml(c?c.nombre:parada.cliente_id)}</b>`);
+  await cargarTodo();
+}
+async function simularRegresoBase(viajeId){
+  const viaje = state.viajes.find(v=>v.id===viajeId);
+  const pend = paradasDe(viajeId).filter(p=>p.estado_parada!=='entregado');
+  if(pend.length){ showToast('Aún hay clientes sin entrega marcada en este viaje'); return; }
+  const {error} = await sb.from('retiro_viajes').update({estado:'completado', hora_regreso_base:new Date().toISOString()}).eq('id', viajeId);
+  if(error){ showToast(error.message); return; }
+  logEvento(`GPS simulado: <b>${viaje.patente}</b> descargó en base — disponible para nuevo viaje`);
+  await cargarTodo();
+}
+async function reiniciarDia(){
+  if(!confirm('Esto borra TODOS los viajes y pallets cargados HOY (los 64 clientes y 36 vehículos). Pensado para pruebas antes de operar en producción. ¿Continuar?')) return;
+  const fecha = hoyISO();
+  await sb.from('retiro_pallets_dia').delete().eq('fecha', fecha);
+  const ids = state.viajes.map(v=>v.id);
+  if(ids.length){
+    await sb.from('retiro_viaje_paradas').delete().in('viaje_id', ids);
+    await sb.from('retiro_viajes').delete().in('id', ids);
+  }
+  liveEventLog = [];
+  logEvento('Día reiniciado (modo prueba)');
+  await cargarTodo();
+}
+
+/* ============================= APP SHELL ============================= */
+const SECTIONS = [
+  {id:'resumen', label:'Resumen'},
+  {id:'carga', label:'Carga de Pallets'},
+  {id:'flota', label:'Disponibilidad de Flota'},
+  {id:'viajes', label:'Camiones y Viajes'},
+  {id:'consulta', label:'Consulta'},
+];
+let currentSection = 'resumen';
+let cargaActor = localStorage.getItem('retiro-carga-actor') || 'SAC';
+let consultaFilter = {q:'', turno:'todos', estado:'todos'};
+let cargaFilter = {q:'', turno:'todos', estado:'todos'};
+let clientesTurnoFiltroViajes = 'todos';
+
+function renderTopTabs(){
+  const nav = document.getElementById('mainTabs');
+  const allowed = ROLE_TABS[miPerfil.rol] || [];
+  nav.innerHTML = SECTIONS.filter(s=>allowed.includes(s.id)).map(s=>`<button data-sec="${s.id}" class="${s.id===currentSection?'active':''}">${s.label}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ currentSection = b.dataset.sec; render(); });
+  });
+}
+function render(){
+  if(!miPerfil) return;
+  renderTopTabs();
+  const main = document.getElementById('mainArea');
+  if(currentSection==='resumen') main.innerHTML = viewResumen();
+  else if(currentSection==='carga') main.innerHTML = viewCarga();
+  else if(currentSection==='flota') main.innerHTML = viewFlota();
+  else if(currentSection==='viajes') main.innerHTML = viewViajes();
+  else main.innerHTML = viewConsulta();
+  wireSection();
+}
+
+/* ---------- clock / theme ---------- */
+function tickClock(){
+  const el = document.getElementById('clock'); if(!el) return;
+  const d = new Date(); const dias=['dom','lun','mar','mié','jue','vie','sáb'];
+  el.textContent = `${dias[d.getDay()]} ${pad2(d.getDate())}/${pad2(d.getMonth()+1)} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+function initTheme(){
+  let saved=null; try{ saved = localStorage.getItem('retiro-theme'); }catch(e){}
+  if(saved) document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon();
+  document.getElementById('themeToggle').addEventListener('click', ()=>{
+    const cur = document.documentElement.getAttribute('data-theme');
+    const mediaDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const curEffective = cur || (mediaDark?'dark':'light');
+    const next = curEffective==='dark' ? 'light':'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('retiro-theme', next); }catch(e){}
+    updateThemeIcon();
+  });
+}
+function updateThemeIcon(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  const mediaDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const effective = cur || (mediaDark?'dark':'light');
+  const icon = document.getElementById('themeIcon');
+  icon.innerHTML = effective==='dark'
+    ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+    : '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
+}
+
+/* ============================= RESUMEN ============================= */
+function viewResumen(){
+  const solicitadoHoy = state.pallets.reduce((s,p)=>s+p.cantidad,0);
+  const enViaje = state.vehiculos.filter(v=>viajeActivoDe(v.patente)).length;
+  const noDisponibles = state.vehiculos.filter(v=>v.estado_disponibilidad!=='Disponible').length;
+  const disponiblesLibres = state.vehiculos.length - enViaje - noDisponibles;
+  const viajesHoy = state.viajes.length;
+  const viajesCompletados = state.viajes.filter(v=>v.estado==='completado').length;
+  const estados = state.clientes.map(c=>({c, st:getEstadoCliente(c)}));
+  const pendientes = estados.filter(x=>x.st.code==='pendiente');
+  const enCurso = estados.filter(x=>x.st.code==='en_curso').length;
+  const entregados = estados.filter(x=>x.st.code==='entregado').length;
+
+  function ind1Agg(area){
+    const rel = state.pallets.filter(p=>p.updated_by_area===area);
+    const total = rel.length;
+    let verde=0, amarillo=0, rojo=0;
+    rel.forEach(p=>{
+      const c = clienteMap()[p.cliente_id]; if(!c) return;
+      const st = getIndicator1(c).status;
+      if(st==='verde') verde++; else if(st==='amarillo') amarillo++; else if(st==='rojo') rojo++;
+    });
+    return {total, verde, amarillo, rojo};
+  }
+  function ind1Bar(agg){
+    if(agg.total===0) return `<div class="empty" style="padding:14px;">Sin registros de carga hoy</div>`;
+    const pv=Math.round(agg.verde/agg.total*100), pa=Math.round(agg.amarillo/agg.total*100), pr=100-pv-pa;
+    return `<div style="display:flex; height:10px; border-radius:6px; overflow:hidden; margin:8px 0 6px; border:1px solid var(--line);">
+      <div style="width:${pv}%; background:var(--green);"></div><div style="width:${pa}%; background:var(--amber);"></div><div style="width:${pr}%; background:var(--red);"></div>
+      </div>
+      <div style="display:flex; gap:14px; font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap;">
+        <span>${agg.verde} verde</span><span>${agg.amarillo} amarillo</span><span>${agg.rojo} rojo</span>
+        <span style="margin-left:auto; color:var(--ink-faint);">${agg.total} cargados hoy</span>
+      </div>`;
+  }
+  const sac = ind1Agg('SAC'), ih = ind1Agg('In House');
+
+  const rank = {rojo:0, amarillo:1, pendiente:2, neutral:3};
+  const atencion = pendientes.slice().sort((a,b)=>(rank[getIndicator1(a.c).status]??9)-(rank[getIndicator1(b.c).status]??9));
+
+  return `
+    <div class="page-head">
+      <h1>Resumen</h1>
+      <p>Estado consolidado del control de retiros diarios — datos en vivo, compartidos entre SAC, In House y Operaciones.</p>
+    </div>
+    <div class="grid-kpi">
+      <div class="card kpi"><div class="num">${solicitadoHoy}</div><div class="lbl">Pallets solicitados hoy</div></div>
+      <div class="card kpi ok"><div class="num">${disponiblesLibres}</div><div class="lbl">Camiones disponibles ahora</div></div>
+      <div class="card kpi warn"><div class="num">${enViaje}</div><div class="lbl">Camiones en viaje</div></div>
+      <div class="card kpi crit"><div class="num">${noDisponibles}</div><div class="lbl">No disponibles (mantención/falla)</div></div>
+      <div class="card kpi crit"><div class="num">${pendientes.length}</div><div class="lbl">Clientes sin cobertura</div></div>
+      <div class="card kpi"><div class="num">${viajesHoy}</div><div class="lbl">Viajes hoy (${viajesCompletados} completados)</div></div>
+    </div>
+
+    <div class="section-title"><h2>Indicador 1 · Anticipación de carga de información</h2></div>
+    <p style="color:var(--ink-soft); font-size:12px; margin-top:-6px;">Meta: dato cargado ≥2h antes del horario de retiro. Medido solo sobre SAC e In House (Operaciones excluida).</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-bottom:8px;">
+      <div class="card" style="padding:14px 16px;"><b>SAC</b>${ind1Bar(sac)}</div>
+      <div class="card" style="padding:14px 16px;"><b>In House</b>${ind1Bar(ih)}</div>
+    </div>
+
+    <div class="section-title"><h2>Indicador 2 · Cumplimiento de horario de retiro</h2></div>
+    <div class="section-note">Bloqueado hasta tener posición GPS real de los camiones. La consulta GPS será solo desde la red interna de Newtrans (decisión 08-09-2026) — fuera de la red se sigue confirmando manualmente. Mientras tanto, ${enCurso} viaje(s) en camino y ${entregados} cliente(s) ya retirados hoy vía confirmación manual/simulada.</div>
+
+    <div class="section-title"><h2>Clientes pendientes de cobertura (${atencion.length})</h2></div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Cliente</th><th>Turno</th><th>Horario hoy</th><th>Solicitado</th><th>Cubierto</th><th>Indicador 1</th></tr></thead><tbody>
+      ${atencion.length ? atencion.map(({c})=>{
+        const cob = coberturaCliente(c.id);
+        return `<tr><td>${escapeHtml(c.nombre)}</td><td>${c.turno}</td><td class="mono">${escapeHtml(horarioTextoHoy(c)||'—')}</td><td class="mono">${pallets(c.id)}</td><td class="mono">${cob}</td><td>${ind1BadgeHtml(getIndicator1(c))}</td></tr>`;
+      }).join('') : `<tr><td colspan="6" class="empty">Todos los clientes con pallets solicitados están cubiertos.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+
+/* ============================= CARGA DE PALLETS ============================= */
+function viewCarga(){
+  let list = state.clientes.map(c=>({c, ind:getIndicator1(c)}));
+  if(cargaFilter.turno!=='todos') list = list.filter(x=>x.c.turno===cargaFilter.turno);
+  if(cargaFilter.q) list = list.filter(x=>x.c.nombre.toLowerCase().includes(cargaFilter.q.toLowerCase()));
+  if(cargaFilter.estado==='sin-cargar') list = list.filter(x=>!palletsRow(x.c.id));
+  if(cargaFilter.estado==='urgente') list = list.filter(x=>!palletsRow(x.c.id) && (x.ind.status==='amarillo'||x.ind.status==='rojo'));
+  if(cargaFilter.estado==='cargado') list = list.filter(x=>!!palletsRow(x.c.id));
+  const rank = {rojo:0, amarillo:1, pendiente:2, neutral:3, verde:4};
+  list.sort((a,b)=>(rank[a.ind.status]??9)-(rank[b.ind.status]??9));
+
+  const cargados = state.clientes.filter(c=>palletsRow(c.id)).length;
+  const urgentes = state.clientes.filter(c=>!palletsRow(c.id) && getIndicator1(c).status==='amarillo').length;
+  const atrasados = state.clientes.filter(c=>!palletsRow(c.id) && getIndicator1(c).status==='rojo').length;
+
+  return `
+    <div class="page-head">
+      <h1>Carga de Pallets</h1>
+      <p>Ingreso de cantidad de pallets a retirar por cliente. SAC, In House y Operaciones usan el mismo formulario — el dato es mutable durante el día y el último valor guardado es el vigente.</p>
+      <div class="role-line"><span class="pill">Ingresando como</span>
+        <div class="chipset">${['SAC','In House','Operaciones'].map(a=>`<button data-actor="${a}" class="${cargaActor===a?'active':''}">${a}</button>`).join('')}</div>
+      </div>
+    </div>
+    <div class="summary-bar">
+      <div class="summary-chip"><span class="n">${state.clientes.length}</span><span class="l">Clientes totales</span></div>
+      <div class="summary-chip"><span class="n" style="color:var(--green);">${cargados}</span><span class="l">Cargados hoy</span></div>
+      <div class="summary-chip"><span class="n" style="color:var(--amber);">${urgentes}</span><span class="l">Urgentes (&lt;2h)</span></div>
+      <div class="summary-chip"><span class="n" style="color:var(--red);">${atrasados}</span><span class="l">Atrasados / sin cargar</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search"><input id="cargaSearch" placeholder="Buscar cliente…" value="${escapeHtml(cargaFilter.q)}"></div>
+      <div class="chipset" id="cargaTurnoFilter">${['todos','AM','PM'].map(t=>`<button data-t="${t}" class="${cargaFilter.turno===t?'active':''}">${t==='todos'?'Todos':t}</button>`).join('')}</div>
+      <div class="chipset" id="cargaEstadoFilter">${[['todos','Todo estado'],['sin-cargar','Sin cargar'],['urgente','Urgente/atrasado'],['cargado','Cargado']].map(([k,l])=>`<button data-e="${k}" class="${cargaFilter.estado===k?'active':''}">${l}</button>`).join('')}</div>
+    </div>
+    <div class="client-grid">
+      ${list.length ? list.map(({c,ind})=>cargaCard(c,ind)).join('') : `<div class="empty" style="grid-column:1/-1;">Sin resultados.</div>`}
+    </div>
+  `;
+}
+function cargaCard(c, ind){
+  const row = palletsRow(c.id);
+  const val = row ? row.cantidad : 0;
+  return `<div class="card ccard" data-carga-card="${c.id}">
+    <div class="ccard-top"><div><div class="ccard-name">${escapeHtml(c.nombre)}</div><div class="ccard-meta">${c.turno} · ref. ruta ${escapeHtml(c.ruta_ref||'—')}</div></div>${ind1BadgeHtml(ind)}</div>
+    <div class="ccard-row">
+      <div class="ccard-time">${escapeHtml(horarioTextoHoy(c)||'—')}</div>
+      <div class="stepper">
+        <button data-act="dec" data-id="${c.id}">−</button>
+        <span class="val" id="carga-val-${c.id}" data-current="${val}">${val}</span>
+        <button data-act="inc" data-id="${c.id}">+</button>
+      </div>
+    </div>
+    <div class="ccard-row">
+      <span style="font-size:11px; color:var(--ink-faint);">${row ? `Últ. carga ${fmtTime(row.updated_at)} · ${escapeHtml(row.updated_by_area||'')}` : 'Aún sin cargar hoy'}</span>
+      <button class="btn small primary" data-act="guardar" data-id="${c.id}">Guardar</button>
+    </div>
+  </div>`;
+}
+
+/* ============================= DISPONIBILIDAD DE FLOTA ============================= */
+function viewFlota(){
+  const rows = state.vehiculos.slice().sort((a,b)=>a.patente.localeCompare(b.patente)).map(v=>{
+    const viaje = viajeActivoDe(v.patente);
+    const nViajes = viajesDePatente(v.patente).length;
+    let estadoBadge;
+    if(v.estado_disponibilidad!=='Disponible') estadoBadge = statusBadgeHtml({tone:'neutral', label:ESTADO_VEHICULO_LABEL[v.estado_disponibilidad]});
+    else if(viaje) estadoBadge = statusBadgeHtml({tone:'amber', label:'En viaje'});
+    else estadoBadge = statusBadgeHtml({tone:'green', label:'Disponible'});
+    return `<tr>
+      <td class="mono">${v.patente}</td>
+      <td>${v.categoria}</td>
+      <td class="mono">${v.capacidad_pallets} plt</td>
+      <td class="mono">${nViajes} hoy</td>
+      <td>
+        <select data-patente="${v.patente}" class="estado-select" ${v.bloqueado_por_taller?'disabled title="Bloqueado por Taller (NTFleet)"':''}>
+          ${v.bloqueado_por_taller?`<option selected>${ESTADO_VEHICULO_LABEL[v.estado_disponibilidad]}</option>`:ESTADOS_VEHICULO.map(e=>`<option value="${e}" ${v.estado_disponibilidad===e?'selected':''}>${ESTADO_VEHICULO_LABEL[e]}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="text" data-patente="${v.patente}" class="motivo-input" placeholder="Motivo (opcional)" ${v.bloqueado_por_taller?'disabled':''} value="${escapeHtml(v.motivo||'')}" style="width:170px;"></td>
+      <td>${estadoBadge}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="page-head">
+      <h1>Disponibilidad de Flota</h1>
+      <p>Chequeo de disponibilidad MACRO del día (mantención, falla, viaje a otra operación) — hoy la determina Operaciones; las unidades en taller o inactivas en NTFleet se bloquean automáticamente y no se pueden editar aquí. Distinto del estado dinámico "en viaje" de la pestaña Camiones y Viajes.</p>
+    </div>
+    <div class="section-note"><b>${state.vehiculos.length} unidades</b> — ${state.vehiculos.filter(v=>v.categoria==='Camion').length} Camiones + ${state.vehiculos.filter(v=>v.categoria==='Rampla').length} Ramplas. El chequeo debe hacerse el mismo día, antes de asignar viajes.</div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Patente</th><th>Categoría</th><th>Capacidad</th><th>Viajes hoy</th><th>Estado del día</th><th>Motivo</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>
+  `;
+}
+
+/* ============================= CAMIONES Y VIAJES ============================= */
+function viewViajes(){
+  const vehiculosOrdenados = state.vehiculos.slice().sort((a,b)=>{
+    const va = viajeActivoDe(a.patente), vb = viajeActivoDe(b.patente);
+    const rank = v => v.estado_disponibilidad!=='Disponible' ? 2 : (viajeActivoDe(v.patente) ? 0 : 1);
+    return rank(a)-rank(b) || a.patente.localeCompare(b.patente);
+  });
+  return `
+    <div class="page-head">
+      <h1>Camiones y Viajes</h1>
+      <p>Un camión puede hacer varias vueltas al día y visitar varios clientes en un mismo viaje. Al descargar en la base, queda libre para un nuevo viaje. La consulta GPS será solo desde la red interna de Newtrans (decisión 08-09-2026) — quien use esta pestaña desde fuera de la red sigue confirmando llegada y regreso a base con los botones "Simular llegada" / "Simular regreso a base".</p>
+      <div class="role-line">${puedeAdministrar() ? `<button class="btn ghost" id="btnReiniciarDia" title="Borra pallets y viajes de HOY para volver a probar">Reiniciar día (modo prueba)</button>` : ''}</div>
+    </div>
+    <div class="grid" style="display:grid; grid-template-columns:1.4fr 1fr; gap:16px; align-items:start;">
+      <div id="camionesList">${vehiculosOrdenados.map(truckCard).join('')}</div>
+      <section class="card">
+        <div style="padding:12px 16px; border-bottom:1px solid var(--line); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft);">Bitácora del día</div>
+        <div style="padding:12px 16px; max-height:640px; overflow-y:auto;" id="timeline">${timelineHtml()}</div>
+      </section>
+    </div>
+  `;
+}
+function timelineHtml(){
+  if(!liveEventLog.length) return `<div class="empty">Aún no hay eventos. Carga pallets o asigna un camión para empezar.</div>`;
+  return `<div class="timeline">${liveEventLog.map(e=>`<div class="tl-item"><span class="ts">${fmtTime(e.ts)}</span><span>${e.msg}</span></div>`).join('')}</div>`;
+}
+function truckCard(v){
+  if(v.estado_disponibilidad!=='Disponible'){
+    return `<div class="truck-card nodisp">
+      <div class="truck-head"><span class="patente">${v.patente}</span>${statusBadgeHtml({tone:'neutral', label:ESTADO_VEHICULO_LABEL[v.estado_disponibilidad]})}</div>
+      <div class="truck-cap">${v.categoria} · cap. ${v.capacidad_pallets} plt${v.motivo?` · ${escapeHtml(v.motivo)}`:''}</div>
+    </div>`;
+  }
+  const viaje = viajeActivoDe(v.patente);
+  const nViajes = viajesDePatente(v.patente).length;
+  if(viaje){
+    const usada = capacidadUsada(viaje);
+    const pct = Math.min(100, Math.round(usada/v.capacidad_pallets*100));
+    const over = usada > v.capacidad_pallets;
+    const paradas = paradasDe(viaje.id);
+    const enViajeYaIds = paradas.map(p=>p.cliente_id);
+    const pendientesParaSumar = state.clientes.filter(c => !enViajeYaIds.includes(c.id) && (pallets(c.id) - coberturaCliente(c.id)) > 0);
+    return `<div class="truck-card enviaje">
+      <div class="truck-head"><span class="patente">${v.patente}</span><span class="badge amber"><span class="dot"></span>En viaje #${viaje.numero_viaje}</span></div>
+      <div class="truck-cap">${v.categoria} · cap. ${v.capacidad_pallets} plt · ${nViajes} viaje(s) hoy</div>
+      <div class="capbar${over?' over':''}"><div style="width:${pct}%"></div></div>
+      <div class="truck-cap">${usada}/${v.capacidad_pallets} plt asignados en este viaje</div>
+      <div class="stop-list">
+        ${paradas.map(p=>{
+          const c = clienteMap()[p.cliente_id];
+          return `<div class="stop"><span class="stop-state ${p.estado_parada}"></span><span style="flex:1;">${escapeHtml(c?c.nombre:p.cliente_id)} — ${p.cantidad_pallets} plt</span>
+            ${p.estado_parada!=='entregado' ? `<button class="btn small" data-act="llegada" data-pid="${p.id}">Simular llegada</button>` : `<span class="badge green">Entregado ${fmtTime(p.hora_llegada)}</span>`}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="truck-actions">
+        ${pendientesParaSumar.length ? `
+          <select data-act="sel-sumar" data-viaje="${viaje.id}">${pendientesParaSumar.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)} (${pallets(c.id)-coberturaCliente(c.id)} plt pend.)</option>`).join('')}</select>
+          <input type="text" data-act="qty-sumar" data-viaje="${viaje.id}" value="1" style="width:46px;">
+          <button class="btn small" data-act="sumar" data-viaje="${viaje.id}">+ Sumar cliente</button>
+        ` : ''}
+        <button class="btn small primary" data-act="regreso" data-viaje="${viaje.id}">Simular regreso a base</button>
+      </div>
+    </div>`;
+  }
+  const pendientes = state.clientes.filter(c => (pallets(c.id)-coberturaCliente(c.id))>0);
+  return `<div class="truck-card disponible">
+    <div class="truck-head"><span class="patente">${v.patente}</span><span class="badge green"><span class="dot"></span>Disponible</span></div>
+    <div class="truck-cap">${v.categoria} · cap. ${v.capacidad_pallets} plt · ${nViajes} viaje(s) hoy</div>
+    ${pendientes.length ? `
+      <div class="truck-actions">
+        <select data-act="sel-iniciar" data-patente="${v.patente}">${pendientes.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)} (${pallets(c.id)-coberturaCliente(c.id)} plt pend.)</option>`).join('')}</select>
+        <button class="btn small primary" data-act="iniciar" data-patente="${v.patente}">Asignar y comenzar viaje</button>
+      </div>` : `<div class="truck-cap">Sin pallets pendientes por asignar.</div>`}
+  </div>`;
+}
+
+/* ============================= CONSULTA (solo lectura) ============================= */
+function viewConsulta(){
+  let list = state.clientes.map(c=>({c, st:getEstadoCliente(c)}));
+  if(consultaFilter.turno!=='todos') list = list.filter(x=>x.c.turno===consultaFilter.turno);
+  if(consultaFilter.estado!=='todos') list = list.filter(x=>x.st.code===consultaFilter.estado);
+  if(consultaFilter.q) list = list.filter(x=>x.c.nombre.toLowerCase().includes(consultaFilter.q.toLowerCase()));
+
+  const nEntregado = state.clientes.filter(c=>getEstadoCliente(c).code==='entregado').length;
+  const nEnCurso = state.clientes.filter(c=>getEstadoCliente(c).code==='en_curso').length;
+  const nPendiente = state.clientes.filter(c=>getEstadoCliente(c).code==='pendiente').length;
+  const estadoFilters = [['todos','Todos'],['pendiente','Pendiente'],['en_curso','En camino'],['entregado','Retirado'],['sin_pallets','Sin pallets']];
+
+  return `
+    <div class="page-head">
+      <h1>Consulta de Retiros</h1>
+      <p>Vista de solo lectura para SAC / In House: estado del retiro y camión asignado por cliente, para responder al instante sin interrumpir a Operaciones.</p>
+      <div class="role-line"><span class="pill readonly">Solo lectura</span></div>
+    </div>
+    <div class="summary-bar">
+      <div class="summary-chip"><span class="n" style="color:var(--green);">${nEntregado}</span><span class="l">Retirados</span></div>
+      <div class="summary-chip"><span class="n" style="color:var(--amber);">${nEnCurso}</span><span class="l">En camino</span></div>
+      <div class="summary-chip"><span class="n" style="color:var(--red);">${nPendiente}</span><span class="l">Pendientes</span></div>
+      <div class="summary-chip"><span class="n">${state.clientes.length}</span><span class="l">Clientes totales</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search"><input id="consultaSearch" placeholder="Buscar cliente…" value="${escapeHtml(consultaFilter.q)}"></div>
+      <div class="chipset" id="consultaTurnoFilter">${['todos','AM','PM'].map(t=>`<button data-t="${t}" class="${consultaFilter.turno===t?'active':''}">${t==='todos'?'Todos':t}</button>`).join('')}</div>
+    </div>
+    <div class="chipset" id="consultaEstadoFilter" style="margin-bottom:14px;">${estadoFilters.map(([k,l])=>`<button data-e="${k}" class="${consultaFilter.estado===k?'active':''}">${l}</button>`).join('')}</div>
+    <div class="client-grid">
+      ${list.length ? list.map(({c,st})=>consultaCard(c,st)).join('') : `<div class="empty" style="grid-column:1/-1;">Sin resultados para este filtro.</div>`}
+    </div>
+    <div class="footnote">La posición del camión en tiempo real (GPS) está pendiente de conectar — el estado se basa en confirmaciones de llegada/regreso registradas por Operaciones.</div>
+  `;
+}
+function consultaCard(c, st){
+  const ps = paradasDeCliente(c.id);
+  let detalle = ps.length ? ps.map(p=>{
+    const viaje = state.viajes.find(v=>v.id===p.viaje_id);
+    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid var(--line-soft);">
+      <span class="mono" style="font-weight:600;">${viaje?viaje.patente:'—'}</span>
+      <span style="font-size:11.5px; color:var(--ink-soft);">${p.cantidad_pallets} plt · ${p.estado_parada==='entregado'?`entregado ${fmtTime(p.hora_llegada)}`:'pendiente'}</span>
+    </div>`;
+  }).join('') : `<div style="padding:8px 0; color:var(--ink-faint); font-size:12px;">Aún sin camión asignado.</div>`;
+  return `<div class="card ccard">
+    <div class="ccard-top"><div><div class="ccard-name">${escapeHtml(c.nombre)}</div><div class="ccard-meta">${c.turno} · ${escapeHtml(c.zona||'—')}</div></div>${statusBadgeHtml(st)}</div>
+    <div class="ccard-time">Retiro hoy: ${escapeHtml(horarioTextoHoy(c)||'—')}</div>
+    <div style="font-size:12px; color:var(--ink-soft);">${coberturaCliente(c.id)} / ${pallets(c.id)} pallets cubiertos</div>
+    <div>${detalle}</div>
+  </div>`;
+}
+
+/* ============================= EVENT WIRING ============================= */
+function wireSection(){
+  if(currentSection==='carga') wireCarga();
+  else if(currentSection==='flota') wireFlota();
+  else if(currentSection==='viajes') wireViajes();
+  else if(currentSection==='consulta') wireConsulta();
+}
+
+function wireCarga(){
+  document.querySelectorAll('[data-actor]').forEach(b=>{
+    b.addEventListener('click', ()=>{ cargaActor=b.dataset.actor; try{localStorage.setItem('retiro-carga-actor',cargaActor);}catch(e){} render(); });
+  });
+  const search = document.getElementById('cargaSearch');
+  if(search) search.addEventListener('input', ()=>{ cargaFilter.q=search.value; rerenderCarga(); });
+  document.getElementById('cargaTurnoFilter').querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ cargaFilter.turno=b.dataset.t; rerenderCarga(); }));
+  document.getElementById('cargaEstadoFilter').querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ cargaFilter.estado=b.dataset.e; rerenderCarga(); }));
+  document.querySelectorAll('[data-act="dec"],[data-act="inc"]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const valEl = document.getElementById(`carga-val-${b.dataset.id}`);
+      let cur = parseInt(valEl.dataset.current,10)||0;
+      cur = Math.max(0, cur + (b.dataset.act==='inc'?1:-1));
+      valEl.textContent = cur; valEl.dataset.current = cur;
+    });
+  });
+  document.querySelectorAll('[data-act="guardar"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const valEl = document.getElementById(`carga-val-${b.dataset.id}`);
+      const cur = parseInt(valEl.dataset.current,10)||0;
+      const c = clienteMap()[b.dataset.id];
+      await setPallets(b.dataset.id, cur, cargaActor);
+      showToast(`${c?c.nombre:''}: ${cur} pallets guardados`);
+    });
+  });
+}
+function rerenderCarga(){ document.getElementById('mainArea').innerHTML = viewCarga(); wireCarga(); }
+
+function wireFlota(){
+  document.querySelectorAll('.estado-select').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const p = sel.dataset.patente;
+      const motivoInput = document.querySelector(`.motivo-input[data-patente="${p}"]`);
+      await setVehiculoEstado(p, sel.value, motivoInput?motivoInput.value:'');
+      showToast(`${p} → ${ESTADO_VEHICULO_LABEL[sel.value]}`);
+    });
+  });
+  document.querySelectorAll('.motivo-input').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const p = inp.dataset.patente;
+      const sel = document.querySelector(`.estado-select[data-patente="${p}"]`);
+      await setVehiculoEstado(p, sel.value, inp.value);
+      showToast('Motivo actualizado');
+    });
+  });
+}
+
+function wireViajes(){
+  const btnReset = document.getElementById('btnReiniciarDia');
+  if(btnReset) btnReset.addEventListener('click', reiniciarDia);
+  document.querySelectorAll('[data-act="llegada"]').forEach(b=>{
+    b.addEventListener('click', ()=>simularLlegada(b.dataset.pid));
+  });
+  document.querySelectorAll('[data-act="regreso"]').forEach(b=>{
+    b.addEventListener('click', ()=>simularRegresoBase(b.dataset.viaje));
+  });
+  document.querySelectorAll('[data-act="iniciar"]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const sel = document.querySelector(`[data-act="sel-iniciar"][data-patente="${b.dataset.patente}"]`);
+      if(!sel || !sel.value) return;
+      iniciarViaje(b.dataset.patente, sel.value);
+    });
+  });
+  document.querySelectorAll('[data-act="sumar"]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const sel = document.querySelector(`[data-act="sel-sumar"][data-viaje="${b.dataset.viaje}"]`);
+      const qty = document.querySelector(`[data-act="qty-sumar"][data-viaje="${b.dataset.viaje}"]`);
+      const q = parseInt(qty?qty.value:'0',10)||0;
+      if(!sel || !sel.value || q<=0) return;
+      agregarParadaAlViaje(b.dataset.viaje, sel.value, q);
+    });
+  });
+}
+
+function wireConsulta(){
+  const search = document.getElementById('consultaSearch');
+  if(search) search.addEventListener('input', ()=>{ consultaFilter.q=search.value; rerenderConsulta(); });
+  document.getElementById('consultaTurnoFilter').querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ consultaFilter.turno=b.dataset.t; rerenderConsulta(); }));
+  document.getElementById('consultaEstadoFilter').querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ consultaFilter.estado=b.dataset.e; rerenderConsulta(); }));
+}
+function rerenderConsulta(){ document.getElementById('mainArea').innerHTML = viewConsulta(); wireConsulta(); }
+
+/* ============================= INIT ============================= */
+document.addEventListener('DOMContentLoaded', ()=>{
+  initTheme();
+  wireLogin();
+  tickClock();
+  setInterval(tickClock, 1000);
+  initAuth();
+});
+})();
+</script>
+
+</body></html>

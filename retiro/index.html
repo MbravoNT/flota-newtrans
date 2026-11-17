@@ -665,8 +665,11 @@ function viewCarga(){
   if(cargaFilter.estado==='sin-cargar') list = list.filter(x=>!palletsRow(x.c.id));
   if(cargaFilter.estado==='urgente') list = list.filter(x=>!palletsRow(x.c.id) && (x.ind.status==='amarillo'||x.ind.status==='rojo'));
   if(cargaFilter.estado==='cargado') list = list.filter(x=>!!palletsRow(x.c.id));
-  const rank = {rojo:0, amarillo:1, pendiente:2, neutral:3, verde:4};
-  list.sort((a,b)=>(rank[a.ind.status]??9)-(rank[b.ind.status]??9));
+  // Orden: 1) sin cargar y vencidos, 2) sin cargar urgentes (<2h), 3) sin cargar con tiempo, 4) sin horario, 5) ya cargados.
+  // Dentro de cada grupo: horario de retiro más próximo primero, luego nombre.
+  const grupo = x=>{ if(palletsRow(x.c.id)) return 5; const st=x.ind.status; return st==='rojo'?1: st==='amarillo'?2: st==='pendiente'?3: 4; };
+  const hora = x=>parseLastTimeToMinutes(horarioTextoHoy(x.c)) ?? 9999;
+  list.sort((a,b)=>grupo(a)-grupo(b) || hora(a)-hora(b) || a.c.nombre.localeCompare(b.c.nombre,'es'));
 
   const cargados = state.clientes.filter(c=>palletsRow(c.id)).length;
   const urgentes = state.clientes.filter(c=>!palletsRow(c.id) && getIndicator1(c).status==='amarillo').length;

@@ -347,6 +347,8 @@ function logEvento(msg){
 
 /* ============================= DATA LOAD ============================= */
 let lastSig='';
+const draftPallets={}; // valores +/- aún sin guardar, por cliente
+function editando(){ const a=document.activeElement; return Object.keys(draftPallets).length>0 || (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.id!=='loginEmail'); }
 async function cargarTodo(){
   try{
     const fecha = hoyISO();
@@ -371,7 +373,7 @@ async function cargarTodo(){
     }
     setLive(true);
     const sig = JSON.stringify([state.clientes,state.vehiculos,state.pallets,state.viajes,state.paradas,Math.floor(Date.now()/60000)]);
-    if(sig!==lastSig){ lastSig=sig; render(); } // solo redibuja si cambiaron los datos (evita parpadeo y perder lo abierto/escrito)
+    if(sig!==lastSig && !editando()){ lastSig=sig; render(); } // solo redibuja si cambiaron los datos (evita parpadeo y perder lo abierto/escrito)
   }catch(e){
     console.error(e);
     setLive(false);
@@ -701,7 +703,7 @@ function viewCarga(){
 }
 function cargaCard(c, ind){
   const row = palletsRow(c.id);
-  const val = row ? row.cantidad : 0;
+  const val = (c.id in draftPallets) ? draftPallets[c.id] : (row ? row.cantidad : 0);
   return `<div class="card ccard" data-carga-card="${c.id}">
     <div class="ccard-top"><div><div class="ccard-name">${escapeHtml(c.nombre)}</div><div class="ccard-meta">${c.turno} · ${escapeHtml(c.ruta_ref||'ref. ruta —')}</div></div>${ind1BadgeHtml(ind)}</div>
     <div class="ccard-row">
@@ -905,7 +907,7 @@ function wireCarga(){
       const valEl = document.getElementById(`carga-val-${b.dataset.id}`);
       let cur = parseInt(valEl.dataset.current,10)||0;
       cur = Math.max(0, cur + (b.dataset.act==='inc'?1:-1));
-      valEl.textContent = cur; valEl.dataset.current = cur;
+      valEl.textContent = cur; valEl.dataset.current = cur; draftPallets[b.dataset.id] = cur;
     });
   });
   document.querySelectorAll('[data-act="guardar"]').forEach(b=>{
@@ -913,6 +915,7 @@ function wireCarga(){
       const valEl = document.getElementById(`carga-val-${b.dataset.id}`);
       const cur = parseInt(valEl.dataset.current,10)||0;
       const c = clienteMap()[b.dataset.id];
+      delete draftPallets[b.dataset.id];
       await setPallets(b.dataset.id, cur, cargaActor);
       showToast(`${c?c.nombre:''}: ${cur} pallets guardados`);
     });

@@ -75,6 +75,15 @@ h2{font-size:15px; margin:0 0 10px;}
 .kpi{padding:14px 16px;}
 .kpi .num{font-family:"IBM Plex Mono",monospace; font-size:26px; font-weight:600; line-height:1;}
 .kpi .lbl{color:var(--ink-soft); font-size:12px; margin-top:6px;}
+.kpi-foot{color:var(--ink-soft); font-size:12px; margin:-8px 0 16px;}
+.accion-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px; margin-bottom:18px;}
+.accion-item{padding:12px 14px;}
+.accion-top{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+.accion-sub{color:var(--ink-soft); font-size:12.5px; margin-top:4px;}
+.ind-card{padding:12px 16px; margin-bottom:18px;}
+.ind-card summary{cursor:pointer; font-weight:600; font-size:14px; display:flex; flex-direction:column; gap:2px;}
+.ind-sum{font-weight:400; font-size:12px; color:var(--ink-soft);}
+.ind-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px;}
 .kpi.warn .num{color:var(--amber);} .kpi.crit .num{color:var(--red);} .kpi.ok .num{color:var(--green);}
 
 .section-title{display:flex; align-items:center; justify-content:space-between; margin:26px 0 10px;}
@@ -619,32 +628,30 @@ function viewResumen(){
     </div>
     <div class="grid-kpi">
       <div class="card kpi"><div class="num">${solicitadoHoy}</div><div class="lbl">Pallets solicitados hoy</div></div>
-      <div class="card kpi ok"><div class="num">${disponiblesLibres}</div><div class="lbl">Camiones disponibles ahora</div></div>
+      <div class="card kpi ok"><div class="num">${disponiblesLibres}</div><div class="lbl">Camiones disponibles</div></div>
       <div class="card kpi warn"><div class="num">${enViaje}</div><div class="lbl">Camiones en viaje</div></div>
-      <div class="card kpi crit"><div class="num">${noDisponibles}</div><div class="lbl">No disponibles (mantención/falla)</div></div>
-      <div class="card kpi crit"><div class="num">${pendientes.length}</div><div class="lbl">Clientes sin cobertura</div></div>
-      <div class="card kpi"><div class="num">${viajesHoy}</div><div class="lbl">Viajes hoy (${viajesCompletados} completados)</div></div>
+      <div class="card kpi ${pendientes.length?'crit':'ok'}"><div class="num">${pendientes.length}</div><div class="lbl">Clientes sin cobertura</div></div>
     </div>
+    <p class="kpi-foot">${noDisponibles} camión(es) no disponible(s) por mantención/falla · ${viajesHoy} viaje(s) hoy (${viajesCompletados} completados)</p>
 
-    <div class="section-title"><h2>Indicador 1 · Anticipación de carga de información</h2></div>
-    <p style="color:var(--ink-soft); font-size:12px; margin-top:-6px;">Meta: dato cargado ≥2h antes del horario de retiro. Medido solo sobre SAC e In House (Operaciones excluida).</p>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-bottom:8px;">
-      <div class="card" style="padding:14px 16px;"><b>SAC</b>${ind1Bar(sac)}</div>
-      <div class="card" style="padding:14px 16px;"><b>In House</b>${ind1Bar(ih)}</div>
-    </div>
+    <div class="section-title"><h2>Requiere acción ahora (${atencion.length})</h2></div>
+    ${atencion.length ? `<div class="accion-list">${atencion.map(({c})=>{
+      const cob = coberturaCliente(c.id);
+      return `<div class="card accion-item">
+        <div class="accion-top"><b>${escapeHtml(c.nombre)}</b>${ind1BadgeHtml(getIndicator1(c))}</div>
+        <div class="accion-sub">${c.turno} · ${escapeHtml(horarioTextoHoy(c)||'sin horario')} · <span class="mono">${cob} de ${pallets(c.id)} pallets cubiertos</span></div>
+      </div>`;
+    }).join('')}</div>` : `<div class="card empty" style="padding:18px; margin-bottom:12px;">Todo en orden: los clientes con pallets solicitados están cubiertos.</div>`}
 
-    <div class="section-title"><h2>Indicador 2 · Cumplimiento de horario de retiro</h2></div>
-    <div class="section-note">Bloqueado hasta tener posición GPS real de los camiones. La consulta GPS será solo desde la red interna de Newtrans (decisión 08-09-2026) — fuera de la red se sigue confirmando manualmente. Mientras tanto, ${enCurso} viaje(s) en camino y ${entregados} cliente(s) ya retirados hoy vía confirmación manual/simulada.</div>
-
-    <div class="section-title"><h2>Clientes pendientes de cobertura (${atencion.length})</h2></div>
-    <div class="table-wrap">
-      <table><thead><tr><th>Cliente</th><th>Turno</th><th>Horario hoy</th><th>Solicitado</th><th>Cubierto</th><th>Indicador 1</th></tr></thead><tbody>
-      ${atencion.length ? atencion.map(({c})=>{
-        const cob = coberturaCliente(c.id);
-        return `<tr><td>${escapeHtml(c.nombre)}</td><td>${c.turno}</td><td class="mono">${escapeHtml(horarioTextoHoy(c)||'—')}</td><td class="mono">${pallets(c.id)}</td><td class="mono">${cob}</td><td>${ind1BadgeHtml(getIndicator1(c))}</td></tr>`;
-      }).join('') : `<tr><td colspan="6" class="empty">Todos los clientes con pallets solicitados están cubiertos.</td></tr>`}
-      </tbody></table>
-    </div>
+    <details class="card ind-card">
+      <summary>Indicador 1 · Anticipación de carga <span class="ind-sum">SAC ${sac.rojo+sac.amarillo} alertas · In House ${ih.rojo+ih.amarillo} alertas</span></summary>
+      <p style="color:var(--ink-soft); font-size:12px; margin:8px 0 12px;">Meta: dato cargado ≥2h antes del horario de retiro. Solo SAC e In House (Operaciones excluida).</p>
+      <div class="ind-grid">
+        <div><b>SAC</b>${ind1Bar(sac)}</div>
+        <div><b>In House</b>${ind1Bar(ih)}</div>
+      </div>
+      <p class="section-note" style="margin:14px 0 0;">Indicador 2 (cumplimiento de horario) bloqueado hasta tener GPS real; solo red interna. Hoy: ${enCurso} viaje(s) en curso, ${entregados} entregado(s).</p>
+    </details>
   `;
 }
 

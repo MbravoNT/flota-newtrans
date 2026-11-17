@@ -309,7 +309,7 @@ async function cargarTodo(){
     ]);
     for(const r of [clientesR, vehiculosR, palletsR, viajesR]) if(r.error) throw r.error;
     state.clientes = clientesR.data;
-    state.vehiculos = vehiculosR.data.map(v=>({...v, estado_disponibilidad:v.estado_efectivo, motivo:v.motivo_efectivo}));
+    state.vehiculos = vehiculosR.data.filter(v=>v.estado_efectivo!=='Inactivo').map(v=>({...v, estado_disponibilidad:v.estado_efectivo, motivo:v.motivo_efectivo})); // Inactivo (NTFleet o manual) no se muestra; Mantención sí, como no disponible
     state.pallets = palletsR.data;
     state.viajes = viajesR.data;
     const viajeIds = state.viajes.map(v=>v.id);

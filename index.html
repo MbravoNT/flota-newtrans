@@ -894,6 +894,7 @@
       <button class="nav-btn" id="subtab-btn-averias" onclick="showSubTab('averias');loadAverias()" style="font-size:13px">⚠️ Averías</button>
       <button class="nav-btn" id="subtab-btn-salida" onclick="showSubTab('salida');cargarSalidaPatentes()" style="font-size:13px">🚪 Salida del Taller</button>
       <button class="nav-btn" id="subtab-btn-revtec" onclick="showSubTab('revtec');initRevTec()" style="font-size:13px">📑 Revisión Técnica</button>
+      <button class="nav-btn" id="subtab-btn-rampla" onclick="showSubTab('rampla');loadRampla()" style="font-size:13px">🚛 Rampla</button>
       <button class="nav-btn" id="subtab-btn-informes" onclick="showSubTab('informes');initInformes()" style="font-size:13px">📊 Informes</button>
       <button class="nav-btn" id="subtab-btn-historial" onclick="showSubTab('historial')" style="font-size:13px">📂 Historial</button>
     </div>
@@ -1089,6 +1090,18 @@
             <tbody id="tbody-rt"><tr><td colspan="4" class="empty-state">Seleccione una patente</td></tr></tbody></table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- SUB-TAB: RAMPLA -->
+    <div id="subtab-rampla" style="display:none;">
+      <div class="toolbar">
+        <input type="text" id="rampla-q" placeholder="Buscar patente…" oninput="renderRampla()" />
+        <button class="btn btn-ghost" onclick="loadRampla()">↺ Actualizar</button>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Patente</th><th>Marca · Año</th><th>Motor</th><th>Equipo de clima</th><th>GPS</th><th>Observación</th><th>Última actualización</th><th></th></tr></thead>
+        <tbody id="tbody-rampla"><tr><td colspan="8" class="empty-state">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
@@ -1351,6 +1364,35 @@
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-veh')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveVehiculo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL RAMPLA ═══ -->
+<div class="modal-overlay" id="modal-rampla">
+  <div class="modal">
+    <h3>🚛 Rampla · <span id="rampla-patente"></span></h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Motor</label>
+        <select id="rampla-motor"><option value="">Sin registrar</option><option>Operativo</option><option>Con falla</option><option>Sin equipo</option></select>
+      </div>
+      <div class="form-group">
+        <label>Equipo de clima</label>
+        <select id="rampla-clima"><option value="">Sin registrar</option><option>Operativo</option><option>Con falla</option><option>Sin equipo</option></select>
+      </div>
+      <div class="form-group">
+        <label>GPS</label>
+        <select id="rampla-gps"><option value="">Sin registrar</option><option>Operativo</option><option>Con falla</option><option>Sin equipo</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Observación (obligatoria si hay "Con falla")</label>
+        <textarea id="rampla-obs" placeholder="Describe la falla…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rampla')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRampla()">Guardar</button>
     </div>
   </div>
 </div>
@@ -2302,6 +2344,65 @@ async function renderCiudades() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// RAMPLA (tabla rampla_estado): estado de motor, clima y GPS por patente
+// ═══════════════════════════════════════════════════════════════
+let allRamplas = [], ramplaActual = null;
+const RAMPLA_CAMPOS = ['motor','clima','gps'];
+
+async function loadRampla() {
+  const { data, error } = await sb.from('rampla_estado').select('*').order('patente');
+  if (error) { toast(error.message, 'error'); return; }
+  allRamplas = data || [];
+  renderRampla();
+}
+
+function ramplaBadge(e) {
+  if (!e) return '<span class="badge badge-orange">Sin registrar</span>';
+  const c = { 'Operativo':'badge-green', 'Con falla':'badge-red', 'Sin equipo':'badge-orange' }[e];
+  return `<span class="badge ${c}">${e === 'Con falla' ? '🔴 ' : e === 'Operativo' ? '🟢 ' : ''}${e}</span>`;
+}
+
+function renderRampla() {
+  const q = document.getElementById('rampla-q').value.trim().toUpperCase();
+  const lista = allRamplas.filter(r => !q || r.patente.includes(q));
+  document.getElementById('tbody-rampla').innerHTML = lista.length ? lista.map(r => {
+    const falla = RAMPLA_CAMPOS.some(c => r[c] === 'Con falla');
+    return `<tr style="${falla ? 'background:rgba(239,68,68,0.07);border-left:3px solid var(--red)' : ''}">
+      <td><strong>${escHtml(r.patente)}</strong></td>
+      <td>${escHtml([r.marca, r.anio].filter(Boolean).join(' · ')) || '—'}</td>
+      <td>${ramplaBadge(r.motor)}</td><td>${ramplaBadge(r.clima)}</td><td>${ramplaBadge(r.gps)}</td>
+      <td style="max-width:280px">${escHtml(r.obs) || '—'}</td>
+      <td style="font-size:12px">${r.fecha ? fmtDateHora(r.fecha) + (r.usuario ? '<br><span style="color:var(--muted)">' + escHtml(r.usuario) + '</span>' : '') : '—'}</td>
+      <td><button class="btn btn-sm" onclick="openRampla('${escHtml(r.patente)}')" title="Actualizar estado">✏️</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" class="empty-state">Sin ramplas</td></tr>';
+}
+
+function openRampla(patente) {
+  const r = allRamplas.find(x => x.patente === patente);
+  if (!r) return;
+  ramplaActual = patente;
+  document.getElementById('rampla-patente').textContent = patente;
+  RAMPLA_CAMPOS.forEach(c => document.getElementById('rampla-' + c).value = r[c] || '');
+  document.getElementById('rampla-obs').value = r.obs || '';
+  document.getElementById('modal-rampla').classList.add('open');
+}
+
+async function saveRampla() {
+  const payload = Object.fromEntries(RAMPLA_CAMPOS.map(c => [c, document.getElementById('rampla-' + c).value || null]));
+  payload.obs = document.getElementById('rampla-obs').value.trim() || null;
+  if (RAMPLA_CAMPOS.some(c => payload[c] === 'Con falla') && !payload.obs) { toast('Describe la falla en la observación', 'error'); return; }
+  payload.fecha = new Date().toISOString();
+  payload.usuario = currentPerfil?.nombre || currentUser?.email || null;
+  const { data, error } = await sb.from('rampla_estado').update(payload).eq('patente', ramplaActual).select('patente');
+  if (error) { toast(error.message, 'error'); return; }
+  if (!data?.length) { toast('Sin permiso para editar ramplas', 'error'); return; }
+  closeModal('modal-rampla');
+  toast(`Rampla ${ramplaActual} actualizada`);
+  loadRampla();
+}
+
+// ═══════════════════════════════════════════════════════════════
 // CLIMATIZACIÓN (columnas clima_* en vehiculos)
 // ═══════════════════════════════════════════════════════════════
 let climaPatenteActual = null;
@@ -2988,7 +3089,7 @@ async function loadTiposMantencion() {
 }
 
 function showSubTab(name) {
-  ['ingreso','salida','averias','revtec','informes','historial'].forEach(n => {
+  ['ingreso','salida','averias','revtec','rampla','informes','historial'].forEach(n => {
     document.getElementById('subtab-' + n).style.display = n === name ? 'block' : 'none';
     const btn = document.getElementById('subtab-btn-' + n);
     if (btn) btn.classList.toggle('active', n === name);
